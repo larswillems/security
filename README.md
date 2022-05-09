@@ -28,7 +28,9 @@ The main requirement is to secure the implementation, limiting what data can be 
 ## How to run
 The server for the chat platform is written in NodeJS, and uses Socket.IO for communication. The front-end itself is a simple web client utilizing jQuery, Bootstrap and Socket.IO.
 
-First, make sure [*Node.JS*](https://nodejs.org/en/download/) and *Socket.IO* (for both [client](https://socket.io/docs/v4/client-installation/) and [server](https://socket.io/docs/v4/server-installation/)) are installed.
+First, make sure to install:
+- [NodeJS](https://nodejs.org/en/download/).
+- Socket.IO, for both [client](https://socket.io/docs/v4/client-installation/) and [server](https://socket.io/docs/v4/server-installation/).
 
 After that, run the application with the following commands:
 
