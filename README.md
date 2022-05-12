@@ -37,7 +37,7 @@ $ npm start
 Finally, to use the application, click [here](https://localhost:8443).
 
 ### A note on HTTPS
-On a public domain, our application would be served over HTTPS using a trusted TLS certificated provided by a Certificate Authority. However, because our app runs locally, we are forced serve it over HTTPS using a *self-signed* certificate. Due to the certificate's self-signed nature, your browser may display a security warning or block access. 
+On a public domain, our application would be served over HTTPS using a trusted TLS certificate provided by a Certificate Authority. However, because our app runs locally, we are forced to serve it over HTTPS using a *self-signed* certificate. Due to the certificate's self-signed nature, your browser may display a security warning or block access. 
 
 One solution is to [install mkcert](https://github.com/FiloSottile/mkcert#installation), a tool for creating locally trusted certificates. After installation, run the following command (still in the `Chat` folder):
 
