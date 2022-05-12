@@ -45,5 +45,5 @@ One solution is to [install mkcert](https://github.com/FiloSottile/mkcert#instal
 $ mkcert -cert-file cert.pem -key-file key.pem localhost
 ```
 
-The Chat application should now run without any security warnings from your browser.
+Now, using `npm start`, the Chat application should run without any security warnings from your browser.
 
