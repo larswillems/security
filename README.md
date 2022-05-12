@@ -20,18 +20,30 @@ The main goal of this project is to secure the implementation, by limiting what 
 
 
 ## How to run
-The server for the chat platform is written in NodeJS, and uses Socket.IO for communication. The front-end itself is a simple web client utilizing jQuery, Bootstrap and Socket.IO.
+The server for the chat platform is written in [NodeJS](https://nodejs.org/en/download/), and uses [Socket.IO](https://socket.io/docs/v4/) for communication. The front-end itself is a simple web client utilizing jQuery, Bootstrap and Socket.IO.
 
-First, make sure to install:
-- [NodeJS](https://nodejs.org/en/download/).
-- Socket.IO, for both [client](https://socket.io/docs/v4/client-installation/) and [server](https://socket.io/docs/v4/server-installation/).
-
-After that, run the application with the following commands:
+For the initial setup, open the `Chat` folder in your terminal and execute the following commands:
 
 ```
-$ cd Chat
 $ npm install
+```
+
+Next, to actually run the application, execute:
+
+```
 $ npm start
 ```
 
-Finally, browse to `http://localhost:3000` in a browser to see the chat application.
+Finally, to use the application, click [here](https://localhost:8443).
+
+### A note on HTTPS
+On a public domain, our application would be served over HTTPS using a trusted TLS certificated provided by a Certificate Authority. However, because our app runs locally, we are forced serve it over HTTPS using a *self-signed* certificate. Due to the certificate's self-signed nature, your browser may display a security warning or block access. 
+
+One solution is to [install mkcert](https://github.com/FiloSottile/mkcert#installation), a tool for creating locally trusted certificates. After installation, run the following command (still in the `Chat` folder):
+
+```
+$ mkcert -cert-file cert.pem -key-file key.pem localhost
+```
+
+The Chat application should now run without any security warnings from your browser.
+

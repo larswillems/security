@@ -1,10 +1,16 @@
 // Setup basic express server
+const fs = require('fs');
+const hostname = 'localhost';
 const express = require('express');
 const app     = express();
 const path    = require('path');
-const server  = require('http').createServer(app);
+const credentials = {
+  key: fs.readFileSync('key.pem', 'utf8'),
+  cert: fs.readFileSync('cert.pem', 'utf8')
+};
+const server  = require('https').createServer(credentials, app);
 const io      = require('socket.io')(server);
-const port    = process.env.PORT || 3000;
+const port    = process.env.PORT || 8443;
 
 const Users   = require('./users.js');
 const Rooms   = require('./rooms.js');
@@ -13,8 +19,8 @@ const Rooms   = require('./rooms.js');
 require('./basicstate.js').setup(Users,Rooms);
 
 // Start server
-server.listen(port, () => {
-  console.log('Server listening at port %d', port);
+server.listen(port, hostname, () => {
+  console.log(`Server running at https://${hostname}:${port}/`);
 });
 
 // Routing for client-side files
