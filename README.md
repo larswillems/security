@@ -22,7 +22,7 @@ The main goal of this project is to secure the implementation, by limiting what 
 ## How to run
 The server for the chat platform is written in [NodeJS](https://nodejs.org/en/download/), and uses [Socket.IO](https://socket.io/docs/v4/) for communication. The front-end itself is a simple web client utilizing jQuery, Bootstrap and Socket.IO.
 
-For the initial setup, open the `Chat` folder in your terminal and execute the following commands:
+For the initial setup, open the `Chat` folder in your terminal and execute the following command:
 
 ```
 $ npm install
