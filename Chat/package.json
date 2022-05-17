@@ -1,9 +1,9 @@
 {
-  "name": "insecure-chat",
+  "name": "chat",
   "version": "0.0.2",
-  "description": "A simple insecure chat platform",
+  "description": "An chat platform with end-to-end encryption.",
   "main": "index.js",
-  "author": "Jim Bauwens",
+  "author": "Bram Silue & Lars Willems",
   "private": true,
   "license": "MIT",
   "dependencies": {

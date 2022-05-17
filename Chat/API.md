@@ -1,5 +1,5 @@
 # API
-This document describes the socket.io API of the insecure-chat application. It lists what messages are understood by the server and the client.
+This document describes the socket.io API of the chat application. It lists what messages are understood by the server and the client.
 
 
 ## Server messages
