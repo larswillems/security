@@ -211,7 +211,7 @@ $(function() {
     // the message sent is a concatenation of the IV, ciphertext, and HMAC:
     let iv = encryption.iv.toString();
     let ciphertext = encryption.encrypted.ciphertext.toString();
-    let hmac = hmac(ciphertext, iv, password);
+    //let hmac = hmac(ciphertext, iv, password);
     let message = iv + ciphertext;
     
     if (message && connected && currentRoom !== false) {
