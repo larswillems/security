@@ -1,7 +1,4 @@
 $(function() {
-  const key = "12345678901234567890123456789012"; //CryptoJS.lib.WordArray.random(32);
-  const password = "password";
-
   // Initialize variables
   const $window = $(window);
   const $messages      = $('.messages'); // Messages area
@@ -27,8 +24,12 @@ $(function() {
   // Encryption //
   ////////////////
 
+  let main_key = "12345678901234567890123456789012";
+  let password = "password";
+
+
   // AES-CTR encryption
-  function encrypt(msg) {
+  function aesEncrypt(msg, key) {
     let key_hex = CryptoJS.enc.Hex.parse(key);
     let iv_hex = CryptoJS.lib.WordArray.random(16);
 
@@ -41,7 +42,7 @@ $(function() {
   }
 
   // AES-CTR decryption
-  function decrypt(encrypted, key, iv) {
+  function aesDecrypt(encrypted, key, iv) {
     let encrypted_parsed = CryptoJS.enc.Hex.parse(encrypted)
     let key_hex = CryptoJS.enc.Hex.parse(key);
     let iv_hex = CryptoJS.enc.Hex.parse(iv);
@@ -60,11 +61,22 @@ $(function() {
 
     return decrypted_utf8;
   }
-
+  
   // HMAC
-  function hmac(ciphertext, iv, password) {
-    let hash = CryptoJS.HmacSHA512(iv.concat(ciphertext), password);
-    return hash;
+  function hmac(ciphertext, iv, passphrase, salt) {
+    // parse salt
+    let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt)
+
+    // apply PBKDF2 salt to passphrase
+    let derived_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
+      keySize: 128 / 32,
+      iterations: 1024
+    });
+
+    // create hmac hash
+    let hash = CryptoJS.HmacSHA512(iv + ciphertext, derived_passphrase);
+
+    return {hash: hash, salt: PBKDF2_salt};
   }
 
   ///////////////
@@ -209,17 +221,20 @@ $(function() {
   }
 
   function sendMessage() {
+    // encrypt input with main key
     let input = $inputMessage.val();
-    let encryption = encrypt(input);
-    // the message sent is a concatenation of the IV, ciphertext, and HMAC:
+    let encryption = aesEncrypt(input, main_key);
+
+    // the message sent is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
     let iv = encryption.iv.toString();
     let ciphertext = encryption.encrypted.ciphertext.toString();
-    let hmac_str = hmac(ciphertext, iv, password).toString();
-    let message = iv + ciphertext + hmac_str;
-    
+    let hmac_salt = CryptoJS.lib.WordArray.random(16).toString();
+    let hmac_str = hmac(ciphertext, iv, password, hmac_salt).hash.toString();
+
+    let message = iv + ciphertext + hmac_str + hmac_salt;
+
     if (message && connected && currentRoom !== false) {
       $inputMessage.val('');
-
       const msg = {username: username, message: message, room: currentRoom.id};
 
       //addChatMessage(msg);
@@ -232,24 +247,25 @@ $(function() {
     let authentication = "";
     // extract IV and ciphertext
     let iv = msg.message.slice(0,32);
-    let hmac_received = msg.message.slice(msg.message.length-128, msg.message.length);
-    let ciphertext = msg.message.slice(32, msg.message.length-128);
+    let hmac_salt_received = msg.message.slice(msg.message.length-32, msg.message.length);
+    let hmac_hash_received = msg.message.slice(msg.message.length-32-128, msg.message.length-32);
+    let ciphertext = msg.message.slice(32, msg.message.length-32-128);
 
     // check HMAC
-    let hmac_match = hmac(ciphertext, iv, password).toString();
-    if (hmac_match != hmac_received) {
+    let hmac_match = hmac(ciphertext, iv, password, hmac_salt_received).hash.toString();
+    if (hmac_match != hmac_hash_received) {
       authentication = "🔴"; // not authenticated.
     } else {
       authentication = "🟢"; // authenticated.
     }
 
     // decrypt ciphertext
-    msg.message = decrypt(ciphertext, key, iv);
+    msg.message = aesDecrypt(ciphertext, main_key, iv);
 
+    // display message
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
                                                         hour  : "numeric", 
                                                         minute: "numeric"});
-
     $messages.append(`
       <div class="message">
         <div class="message-avatar"></div>
