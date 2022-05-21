@@ -30,7 +30,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 //////////////////////
 // Crypto functions //
 //////////////////////
+/*
 const crypto = require('crypto');
+
+function encrypt (to_encrypt_, key_, iv_) {
+  let to_encrypt = Buffer.from(to_encrypt_, 'utf8');
+  let key = Buffer.from(key_, 'hex');
+  let iv = Buffer.from(iv_, 'hex');
+
+  const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
+  let encrypted = cipher.update(to_encrypt, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+
+  return encrypted;
+};
+
 function decrypt (encrypted_, key_, iv_) {
   let encrypted = Buffer.from(encrypted_, 'hex');
   let key = Buffer.from(key_, 'hex');
@@ -42,6 +56,7 @@ function decrypt (encrypted_, key_, iv_) {
 
   return decrypted;
 };
+*/
 
 ///////////////////////////////
 // Chatroom helper functions //
@@ -172,10 +187,16 @@ io.on('connection', (socket) => {
     if (userLoggedIn) {
       console.log(msg);
 
+      /*
       let key = "1234567890123456789012345678901212345678901234567890123456789012";
       let iv = "12345678901234561234567890123456";
 
-      msg.message = decrypt(msg.message, key, iv);
+      let encrypted = encrypt("ttt", key, iv);
+      console.log(encrypted);
+      let decrypted = decrypt(msg.message, key, iv);
+      console.log(decrypted);
+      */
+
       addMessageToRoom(msg.room, username, msg);
     }
   });

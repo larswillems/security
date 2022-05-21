@@ -1,5 +1,8 @@
 $(function() {
 
+  let key = CryptoJS.enc.Hex.parse("1234567890123456789012345678901212345678901234567890123456789012"); //CryptoJS.lib.WordArray.random(32);
+  let iv = CryptoJS.enc.Hex.parse("12345678901234561234567890123456"); //CryptoJS.lib.WordArray.random(16);
+  
   // Initialize variables
   const $window = $(window);
   const $messages      = $('.messages'); // Messages area
@@ -161,10 +164,10 @@ $(function() {
     }
   }
 
-  //encryption
+  // Encryption //
   function encrypt(msg) {
-    let key = CryptoJS.enc.Hex.parse("1234567890123456789012345678901212345678901234567890123456789012"); //CryptoJS.lib.WordArray.random(32);
-    let iv = CryptoJS.enc.Hex.parse("12345678901234561234567890123456"); //CryptoJS.lib.WordArray.random(12);
+    //let key = CryptoJS.lib.WordArray.random(32);
+    //let iv = CryptoJS.lib.WordArray.random(16);
 
     let encrypted = CryptoJS.AES.encrypt(msg, key, {
       mode: CryptoJS.mode.CTR,
@@ -173,28 +176,31 @@ $(function() {
     });
     return {encrypted: encrypted, key: key, iv: iv};
   }
-/*
-  function decrypt(encrypted, key) {
+
+  function decrypt(encrypted, key, iv) {
+    let encrypted_parsed = CryptoJS.enc.Hex.parse(encrypted)
+
     let aesDecryptor = CryptoJS.algo.AES.createDecryptor(key, {
       mode: CryptoJS.mode.CTR,
-      iv: encrypted.iv,
+      iv: iv,
       padding: CryptoJS.pad.NoPadding
     });
 
-    let decrypted_hex = aesDecryptor.process(encrypted.ciphertext);
+    let decrypted_hex = aesDecryptor.process(encrypted_parsed);
     decrypted_hex += aesDecryptor.finalize();
 
-    buffer = Buffer.from(decrypted_hex, 'hex');
-    //decrypted_utf8 = buffer.toString('utf8');
-    socket.emit('new message', decrypted_hex);
+    let decrypted_parsed = CryptoJS.enc.Hex.parse(decrypted_hex);
+    let decrypted_utf8 = decrypted_parsed.toString(CryptoJS.enc.Utf8);
+
+    return decrypted_utf8;
   }
-*/
+  // ---------- //
 
   function sendMessage() {
     let input = $inputMessage.val();
     let encryption = encrypt(input);
     let message = encryption.encrypted.ciphertext.toString();
-
+    
     if (message && connected && currentRoom !== false) {
       $inputMessage.val('');
 
@@ -207,6 +213,9 @@ $(function() {
 
 
   function addChatMessage(msg) {
+    // decrypt message
+    msg.message = decrypt(msg.message, key, iv);
+
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
                                                         hour  : "numeric", 
                                                         minute: "numeric"});
@@ -309,6 +318,7 @@ $(function() {
   socket.on('new message', (msg) => {
     const roomId = msg.room;
     const room = rooms[roomId];
+
     if (room) {
       room.history.push(msg);
     }
