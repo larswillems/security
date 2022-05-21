@@ -8,14 +8,12 @@ $(function() {
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
 
- 
   // Prompt for setting a username
   let username = prompt("Enter your username:");
   $usernameLabel.text(username);
 
   let connected = false;
   let socket = io();
-
   let modalShowing = false;
 
   $('#addChannelModal').on('hidden.bs.modal', () => modalShowing = false)
@@ -163,8 +161,39 @@ $(function() {
     }
   }
 
+  //encryption
+  function encrypt(msg) {
+    let key = CryptoJS.enc.Hex.parse("1234567890123456789012345678901212345678901234567890123456789012"); //CryptoJS.lib.WordArray.random(32);
+    let iv = CryptoJS.enc.Hex.parse("12345678901234561234567890123456"); //CryptoJS.lib.WordArray.random(12);
+
+    let encrypted = CryptoJS.AES.encrypt(msg, key, {
+      mode: CryptoJS.mode.CTR,
+      iv: iv,
+      padding: CryptoJS.pad.NoPadding
+    });
+    return {encrypted: encrypted, key: key, iv: iv};
+  }
+/*
+  function decrypt(encrypted, key) {
+    let aesDecryptor = CryptoJS.algo.AES.createDecryptor(key, {
+      mode: CryptoJS.mode.CTR,
+      iv: encrypted.iv,
+      padding: CryptoJS.pad.NoPadding
+    });
+
+    let decrypted_hex = aesDecryptor.process(encrypted.ciphertext);
+    decrypted_hex += aesDecryptor.finalize();
+
+    buffer = Buffer.from(decrypted_hex, 'hex');
+    //decrypted_utf8 = buffer.toString('utf8');
+    socket.emit('new message', decrypted_hex);
+  }
+*/
+
   function sendMessage() {
-    let message = $inputMessage.val();
+    let input = $inputMessage.val();
+    let encryption = encrypt(input);
+    let message = encryption.encrypted.ciphertext.toString();
 
     if (message && connected && currentRoom !== false) {
       $inputMessage.val('');

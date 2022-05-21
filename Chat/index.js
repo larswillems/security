@@ -15,6 +15,7 @@ const port    = process.env.PORT || 8443;
 const Users   = require('./users.js');
 const Rooms   = require('./rooms.js');
 
+
 // Load application config/state
 require('./basicstate.js').setup(Users,Rooms);
 
@@ -26,6 +27,21 @@ server.listen(port, hostname, () => {
 // Routing for client-side files
 app.use(express.static(path.join(__dirname, 'public')));
 
+//////////////////////
+// Crypto functions //
+//////////////////////
+const crypto = require('crypto');
+function decrypt (encrypted_, key_, iv_) {
+  let encrypted = Buffer.from(encrypted_, 'hex');
+  let key = Buffer.from(key_, 'hex');
+  let iv = Buffer.from(iv_, 'hex');
+
+  const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
+};
 
 ///////////////////////////////
 // Chatroom helper functions //
@@ -155,6 +171,11 @@ io.on('connection', (socket) => {
   socket.on('new message', (msg) => {
     if (userLoggedIn) {
       console.log(msg);
+
+      let key = "1234567890123456789012345678901212345678901234567890123456789012";
+      let iv = "12345678901234561234567890123456";
+
+      msg.message = decrypt(msg.message, key, iv);
       addMessageToRoom(msg.room, username, msg);
     }
   });
