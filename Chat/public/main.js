@@ -238,9 +238,9 @@ $(function() {
     // check HMAC
     let hmac_match = hmac(ciphertext, iv, password).toString();
     if (hmac_match != hmac_received) {
-      authentication = "Could not Authenticate! ⚠";
+      authentication = "🔴"; // not authenticated.
     } else {
-      authentication = "Authenticated ☑";
+      authentication = "🟢"; // authenticated.
     }
 
     // decrypt ciphertext
@@ -255,7 +255,7 @@ $(function() {
         <div class="message-avatar"></div>
         <div class="message-textual">
           <span class="message-user">${msg.username}</span>
-          <span class="message-authentication">${" | " + authentication}</span>
+          <span class="message-authentication" title="Authentication Status">${authentication}</span>
           <span class="message-time">${"(" + time + ")"}</span>
           <span class="message-content">${msg.message}</span>
         </div>
