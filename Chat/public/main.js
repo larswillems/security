@@ -26,7 +26,8 @@ $(function() {
   ////////////////
   // Encryption //
   ////////////////
-  
+
+  // AES-CTR encryption
   function encrypt(msg) {
     let key_hex = CryptoJS.enc.Hex.parse(key);
     let iv_hex = CryptoJS.lib.WordArray.random(16);
@@ -39,6 +40,7 @@ $(function() {
     return {encrypted: encrypted, key: key_hex, iv: iv_hex};
   }
 
+  // AES-CTR decryption
   function decrypt(encrypted, key, iv) {
     let encrypted_parsed = CryptoJS.enc.Hex.parse(encrypted)
     let key_hex = CryptoJS.enc.Hex.parse(key);
@@ -59,9 +61,10 @@ $(function() {
     return decrypted_utf8;
   }
 
+  // HMAC
   function hmac(ciphertext, iv, password) {
-    let hmac = CryptoJS.HmacMD5(iv.concat(ciphertext), password);
-    return hmac;
+    let hash = CryptoJS.HmacSHA512(iv.concat(ciphertext), password);
+    return hash;
   }
 
   ///////////////
@@ -211,8 +214,8 @@ $(function() {
     // the message sent is a concatenation of the IV, ciphertext, and HMAC:
     let iv = encryption.iv.toString();
     let ciphertext = encryption.encrypted.ciphertext.toString();
-    //let hmac = hmac(ciphertext, iv, password);
-    let message = iv + ciphertext;
+    let hmac_str = hmac(ciphertext, iv, password).toString();
+    let message = iv + ciphertext + hmac_str;
     
     if (message && connected && currentRoom !== false) {
       $inputMessage.val('');
@@ -226,9 +229,20 @@ $(function() {
 
 
   function addChatMessage(msg) {
+    let authentication = "";
     // extract IV and ciphertext
     let iv = msg.message.slice(0,32);
-    let ciphertext = msg.message.slice(32, msg.message.length);
+    let hmac_received = msg.message.slice(msg.message.length-128, msg.message.length);
+    let ciphertext = msg.message.slice(32, msg.message.length-128);
+
+    // check HMAC
+    let hmac_match = hmac(ciphertext, iv, password).toString();
+    if (hmac_match != hmac_received) {
+      authentication = "Could not Authenticate! ⚠";
+    } else {
+      authentication = "Authenticated ☑";
+    }
+
     // decrypt ciphertext
     msg.message = decrypt(ciphertext, key, iv);
 
@@ -241,7 +255,8 @@ $(function() {
         <div class="message-avatar"></div>
         <div class="message-textual">
           <span class="message-user">${msg.username}</span>
-          <span class="message-time">${time}</span>
+          <span class="message-authentication">${" | " + authentication}</span>
+          <span class="message-time">${"(" + time + ")"}</span>
           <span class="message-content">${msg.message}</span>
         </div>
       </div>

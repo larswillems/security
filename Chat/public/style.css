@@ -233,9 +233,15 @@ CD2553
 
 .message-user {
   font-weight: bold;
+  font-size: 12pt;
 }
 
 .message-time {
+  color: rgb(155, 155, 155);
+  font-size: 8pt;
+}
+
+.message-authentication {
   color: #666;
   font-size: smaller;
 }
