@@ -24,9 +24,8 @@ $(function() {
   // Encryption //
   ////////////////
 
-  let main_key = "12345678901234567890123456789012";
-  let password = "password";
-
+  let aes_Key = "12345678901234567890123456789012"; // for AES encryption (16 byte key)
+  let hmac_Key = "password"; // for HMAC authentication
 
   // AES-CTR encryption
   function aesEncrypt(msg, key) {
@@ -68,13 +67,13 @@ $(function() {
     let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt)
 
     // apply PBKDF2 salt to passphrase
-    let derived_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
+    let PBKDF2_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
       keySize: 128 / 32,
       iterations: 1024
     });
 
     // create hmac hash
-    let hash = CryptoJS.HmacSHA512(iv + ciphertext, derived_passphrase);
+    let hash = CryptoJS.HmacSHA512(iv + ciphertext, PBKDF2_passphrase);
 
     return {hash: hash, salt: PBKDF2_salt};
   }
@@ -223,13 +222,13 @@ $(function() {
   function sendMessage() {
     // encrypt input with main key
     let input = $inputMessage.val();
-    let encryption = aesEncrypt(input, main_key);
+    let encryption = aesEncrypt(input, aes_Key);
 
     // the message sent is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
     let iv = encryption.iv.toString();
     let ciphertext = encryption.encrypted.ciphertext.toString();
     let hmac_salt = CryptoJS.lib.WordArray.random(16).toString();
-    let hmac_str = hmac(ciphertext, iv, password, hmac_salt).hash.toString();
+    let hmac_str = hmac(ciphertext, iv, hmac_Key, hmac_salt).hash.toString();
 
     let message = iv + ciphertext + hmac_str + hmac_salt;
 
@@ -252,7 +251,7 @@ $(function() {
     let ciphertext = msg.message.slice(32, msg.message.length-32-128);
 
     // check HMAC
-    let hmac_match = hmac(ciphertext, iv, password, hmac_salt_received).hash.toString();
+    let hmac_match = hmac(ciphertext, iv, hmac_Key, hmac_salt_received).hash.toString();
     if (hmac_match != hmac_hash_received) {
       authentication = "🔴"; // not authenticated.
     } else {
@@ -260,7 +259,7 @@ $(function() {
     }
 
     // decrypt ciphertext
-    msg.message = aesDecrypt(ciphertext, main_key, iv);
+    msg.message = aesDecrypt(ciphertext, aes_Key, iv);
 
     // display message
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 

@@ -30,7 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 //////////////////////
 // Crypto functions //
 //////////////////////
-/*
+
 const crypto = require('crypto');
 
 function encrypt (to_encrypt_, key_, iv_) {
@@ -56,7 +56,7 @@ function decrypt (encrypted_, key_, iv_) {
 
   return decrypted;
 };
-*/
+
 
 ///////////////////////////////
 // Chatroom helper functions //
