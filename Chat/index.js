@@ -33,7 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const crypto = require('crypto');
 
-function encrypt (to_encrypt_, key_, iv_) {
+function aesEncrypt (to_encrypt_, key_, iv_) {
   let to_encrypt = Buffer.from(to_encrypt_, 'utf8');
   let key = Buffer.from(key_, 'hex');
   let iv = Buffer.from(iv_, 'hex');
@@ -45,7 +45,7 @@ function encrypt (to_encrypt_, key_, iv_) {
   return encrypted;
 };
 
-function decrypt (encrypted_, key_, iv_) {
+function aesDecrypt (encrypted_, key_, iv_) {
   let encrypted = Buffer.from(encrypted_, 'hex');
   let key = Buffer.from(key_, 'hex');
   let iv = Buffer.from(iv_, 'hex');
