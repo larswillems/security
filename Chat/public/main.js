@@ -220,9 +220,11 @@ $(function() {
   }
 
   function sendMessage() {
-    // encrypt input with main key
     let input = $inputMessage.val();
-    let encryption = aesEncrypt(input, aes_Key);
+    // sanitize the input against HTML-injection or JS-injection by encoding '<' and '>' into their HTML equivalent:
+    let sanitized_input = input.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // encrypt sanitized input:
+    let encryption = aesEncrypt(sanitized_input, aes_Key);
 
     // the message sent is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
     let iv = encryption.iv.toString();
