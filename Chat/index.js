@@ -42,6 +42,30 @@ function pbkdf2(password) {
   return {key: key, salt: salt};
 }
 
+function aesEncrypt (to_encrypt_, key_, iv_) {
+  let to_encrypt = Buffer.from(to_encrypt_, 'utf8');
+  let key = Buffer.from(key_, 'hex');
+  let iv = Buffer.from(iv_, 'hex');
+
+  const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
+  let encrypted = cipher.update(to_encrypt, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+
+  return encrypted;
+};
+
+function aesDecrypt (encrypted_, key_, iv_) {
+  let encrypted = Buffer.from(encrypted_, 'hex');
+  let key = Buffer.from(key_, 'hex');
+  let iv = Buffer.from(iv_, 'hex');
+
+  const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
+};
+
 
 ///////////////////////////////
 // Chatroom helper functions //
