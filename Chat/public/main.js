@@ -27,40 +27,6 @@ $(function() {
   let aes_Key = "12345678901234567890123456789012"; // for AES encryption (16 byte key)
   let hmac_Key = "password"; // for HMAC authentication
 
-  // AES-CTR encryption
-  function aesEncrypt(msg, key) {
-    let key_hex = CryptoJS.enc.Hex.parse(key);
-    let iv_hex = CryptoJS.lib.WordArray.random(16);
-
-    let encrypted = CryptoJS.AES.encrypt(msg, key_hex, {
-      mode: CryptoJS.mode.CTR,
-      iv: iv_hex,
-      padding: CryptoJS.pad.NoPadding
-    });
-    return {encrypted: encrypted, key: key_hex, iv: iv_hex};
-  }
-
-  // AES-CTR decryption
-  function aesDecrypt(encrypted, key, iv) {
-    let encrypted_parsed = CryptoJS.enc.Hex.parse(encrypted)
-    let key_hex = CryptoJS.enc.Hex.parse(key);
-    let iv_hex = CryptoJS.enc.Hex.parse(iv);
-
-    let aesDecryptor = CryptoJS.algo.AES.createDecryptor(key_hex, {
-      mode: CryptoJS.mode.CTR,
-      iv: iv_hex,
-      padding: CryptoJS.pad.NoPadding
-    });
-
-    let decrypted_hex = aesDecryptor.process(encrypted_parsed);
-    decrypted_hex += aesDecryptor.finalize();
-
-    let decrypted_parsed = CryptoJS.enc.Hex.parse(decrypted_hex);
-    let decrypted_utf8 = decrypted_parsed.toString(CryptoJS.enc.Utf8);
-
-    return decrypted_utf8;
-  }
-  
   // HMAC
   function hmac(ciphertext, iv, passphrase, salt) {
     // parse salt
@@ -77,6 +43,49 @@ $(function() {
 
     return {hash: hash, salt: PBKDF2_salt};
   }
+
+  // AES-CTR encryption
+  function aesEncrypt(msg, key) {
+    let key_parsed = CryptoJS.enc.Hex.parse(key);
+    let iv_parsed = CryptoJS.lib.WordArray.random(16);
+
+    let encryption = CryptoJS.AES.encrypt(msg, key_parsed, {
+      mode: CryptoJS.mode.CTR,
+      iv: iv_parsed,
+      padding: CryptoJS.pad.NoPadding
+    });
+    
+    // the encrypted message is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
+    let iv = iv_parsed.toString();
+    let ciphertext = encryption.toString();
+    let hmac_salt = CryptoJS.lib.WordArray.random(16).toString();
+    let hmac_str = hmac(ciphertext, iv, hmac_Key, hmac_salt).hash.toString();
+    let encrypted_msg = iv + ciphertext + hmac_str + hmac_salt;
+
+    return encrypted_msg;
+  }
+
+  // AES-CTR decryption
+  function aesDecrypt(encrypted, key, iv) {
+    let encrypted_parsed = CryptoJS.enc.Base64.parse(encrypted);
+    let key_parsed = CryptoJS.enc.Hex.parse(key);
+    let iv_parsed = CryptoJS.enc.Hex.parse(iv);
+
+    let aesDecryptor = CryptoJS.algo.AES.createDecryptor(key_parsed, {
+      mode: CryptoJS.mode.CTR,
+      iv: iv_parsed,
+      padding: CryptoJS.pad.NoPadding
+    });
+
+    let decrypted = aesDecryptor.process(encrypted_parsed);
+    decrypted += aesDecryptor.finalize();
+
+    let decrypted_parsed = CryptoJS.enc.Hex.parse(decrypted);
+    let decrypted_utf8 = decrypted_parsed.toString(CryptoJS.enc.Utf8);
+
+    return decrypted_utf8;
+  }
+
 
   ///////////////
   // User List //
@@ -173,7 +182,7 @@ $(function() {
     currentRoom = room;
 
     $messages.empty();
-    room.history.forEach(m => addChatMessage(m));
+    room.history.forEach(m => addChatMessage(decryptProcessedMsg(m, processEncryptedMsg(m))));
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -223,55 +232,70 @@ $(function() {
     // retrieve input and sanitize against XSS attacks
     let input = $inputMessage.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     // encrypt sanitized input:
-    let encryption = aesEncrypt(input, aes_Key);
+    let encrypted_message = aesEncrypt(input, aes_Key);
+    let encrypted_username = aesEncrypt(username, aes_Key);
 
-    // the message sent is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
-    let iv = encryption.iv.toString();
-    let ciphertext = encryption.encrypted.ciphertext.toString();
-    let hmac_salt = CryptoJS.lib.WordArray.random(16).toString();
-    let hmac_str = hmac(ciphertext, iv, hmac_Key, hmac_salt).hash.toString();
-
-    let message = iv + ciphertext + hmac_str + hmac_salt;
-
-    if (message && connected && currentRoom !== false) {
+    if (encrypted_message && connected && currentRoom !== false) {
       $inputMessage.val('');
-      const msg = {username: username, message: message, room: currentRoom.id};
-
+      const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
+      
       //addChatMessage(msg);
       socket.emit('new message', msg);
     }
   }
 
 
-  function addChatMessage(msg) {
+  function processEncryptedMsg(msg) {
     let authentication = "";
-    // extract IV and ciphertext
-    let iv = msg.message.slice(0,32);
-    let hmac_salt_received = msg.message.slice(msg.message.length-32, msg.message.length);
-    let hmac_hash_received = msg.message.slice(msg.message.length-32-128, msg.message.length-32);
-    let ciphertext = msg.message.slice(32, msg.message.length-32-128);
 
-    // check HMAC
-    let hmac_match = hmac(ciphertext, iv, hmac_Key, hmac_salt_received).hash.toString();
-    if (hmac_match != hmac_hash_received) {
-      authentication = "🔴"; // not authenticated.
-    } else {
+    // extract IV, HMAC, and ciphertext from message and username
+    let message_iv = msg.message.slice(0,32);
+    let message_hmac_salt_received = msg.message.slice(msg.message.length-32, msg.message.length);
+    let message_hmac_hash_received = msg.message.slice(msg.message.length-32-128, msg.message.length-32);
+    let message_ciphertext = msg.message.slice(32, msg.message.length-32-128);
+
+    let username_iv = msg.username.slice(0,32);
+    let username_hmac_salt_received = msg.username.slice(msg.username.length-32, msg.username.length);
+    let username_hmac_hash_received = msg.username.slice(msg.username.length-32-128, msg.username.length-32);
+    let username_ciphertext = msg.username.slice(32, msg.username.length-32-128);
+
+    // check HMACs
+    let message_hmac_hash_match = hmac(message_ciphertext, message_iv, hmac_Key, message_hmac_salt_received).hash.toString();
+    let username_hmac_hash_match = hmac(username_ciphertext, username_iv, hmac_Key, username_hmac_salt_received).hash.toString();
+
+    if (message_hmac_hash_match == message_hmac_hash_received && username_hmac_hash_match == username_hmac_hash_received) {
       authentication = "🟢"; // authenticated.
+    } else {
+      authentication = "🔴"; // not authenticated.
     }
 
-    // decrypt ciphertext
-    msg.message = aesDecrypt(ciphertext, aes_Key, iv);
+    let processed_msg = {message_ciphertext: message_ciphertext, username_ciphertext: username_ciphertext, 
+            message_iv: message_iv, username_iv: username_iv, 
+            authentication: authentication};
 
-    // display message
+    return processed_msg;
+  }
+
+  function decryptProcessedMsg(msg, processed_msg) {
+    // decrypt message and username
+    msg.message = aesDecrypt(processed_msg.message_ciphertext, aes_Key, processed_msg.message_iv);
+    msg.username = aesDecrypt(processed_msg.username_ciphertext, aes_Key, processed_msg.username_iv);
+    msg.authentication = processed_msg.authentication;
+    return msg;
+  }
+
+  function addChatMessage(msg) {
+    // display time and message
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
                                                         hour  : "numeric", 
                                                         minute: "numeric"});
+
     $messages.append(`
       <div class="message">
         <div class="message-avatar"></div>
         <div class="message-textual">
           <span class="message-user">${msg.username}</span>
-          <span class="message-authentication" title="Authentication Status">${authentication}</span>
+          <span class="message-authentication" title="Authentication Status">${msg.authentication}</span>
           <span class="message-time">${"(" + time + ")"}</span>
           <span class="message-content">${msg.message}</span>
         </div>
@@ -363,7 +387,11 @@ $(function() {
   });
 
   // Whenever the server emits 'new message', update the chat body
-  socket.on('new message', (msg) => {
+  socket.on('new message', (encrypted_msg) => {
+    // decrypt message
+    let msg = decryptProcessedMsg(encrypted_msg, processEncryptedMsg(encrypted_msg));
+
+    // add message
     const roomId = msg.room;
     const room = rooms[roomId];
 
