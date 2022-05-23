@@ -8,7 +8,7 @@ $(function() {
   const $roomList      = $('#room-list');
 
   // Prompt for setting a username
-  let username = prompt("Enter your username:");
+  let username = prompt("Enter your username:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   $usernameLabel.text(username);
 
   let connected = false;
@@ -220,11 +220,10 @@ $(function() {
   }
 
   function sendMessage() {
-    let input = $inputMessage.val();
-    // sanitize the input against HTML-injection or JS-injection by encoding '<' and '>' into their HTML equivalent:
-    let sanitized_input = input.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // retrieve input and sanitize against XSS attacks
+    let input = $inputMessage.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     // encrypt sanitized input:
-    let encryption = aesEncrypt(sanitized_input, aes_Key);
+    let encryption = aesEncrypt(input, aes_Key);
 
     // the message sent is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
     let iv = encryption.iv.toString();
@@ -291,8 +290,9 @@ $(function() {
 
 
   function addChannel() {
-    const name = $("#inp-channel-name").val();
-    const description = $("#inp-channel-description").val();
+    // retrieve inputs and sanitize against XSS attacks
+    const name = $("#inp-channel-name").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const description = $("#inp-channel-description").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const private = $('#inp-private').is(':checked');
 
     socket.emit('add_channel', {name: name, description: description, private: private});
