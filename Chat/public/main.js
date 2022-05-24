@@ -1,4 +1,4 @@
-$(function() {
+
   // Initialize variables
   const $window = $(window);
   const $messages      = $('.messages'); // Messages area
@@ -6,13 +6,33 @@ $(function() {
   const $usernameLabel = $('#user-name');
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
+  var username = ''
+
+  window.onload = function () {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    if (urlParams.has('name')){
+      const product = urlParams.get('name')
+      $usernameLabel.text(product);
+      username = product
+    }
+    else {
+      document.getElementsByTagName("BODY")[0].style.display = "none";
+
+
+    }
+  }
 
   // Prompt for setting a username
-  let username = prompt("Enter your username:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  $usernameLabel.text(username);
+  //TODO: replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  //let username = prompt("Enter your username:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  //$usernameLabel.text(username);
 
   let connected = false;
   let socket = io();
+
+
+
   let modalShowing = false;
 
   $('#addChannelModal').on('hidden.bs.modal', () => modalShowing = false)
@@ -450,4 +470,3 @@ $(function() {
   socket.on('reconnect_error', () => {
   });
 
-});

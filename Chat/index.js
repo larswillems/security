@@ -2,7 +2,9 @@
 const fs = require('fs');
 const hostname = 'localhost';
 const express = require('express');
+const cookieParser = require("cookie-parser");
 const app     = express();
+app.use(cookieParser());
 const path    = require('path');
 const credentials = {
   key: fs.readFileSync('key.pem', 'utf8'),
@@ -15,6 +17,12 @@ const port    = process.env.PORT || 8443;
 const Users   = require('./users.js');
 const Rooms   = require('./rooms.js');
 
+const {userAuth} = require("./middleware/auth.js");
+
+app.get("/", (req, res) => res.render("home"))
+app.get("/register", (req, res) => res.render("register"))
+app.get("/login", (req, res) => res.render("login"))
+app.get("/main", userAuth, (req, res) => res.render("main"))
 
 // Load application config/state
 require('./basicstate.js').setup(Users,Rooms);
@@ -24,8 +32,29 @@ server.listen(port, hostname, () => {
   console.log(`Server running at https://${hostname}:${port}/`);
 });
 
+
+// Handling Error
+process.on("unhandledRejection", err => {
+  console.log(`An error occurred: ${err.message}`)
+  //server.close(() => process.exit(1))
+})
+
 // Routing for client-side files
 app.use(express.static(path.join(__dirname, 'public')));
+
+var bodyParser = require('body-parser');
+
+// configure the app to use bodyParser()
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json());
+
+//app.use(express.json())
+app.use("/api/auth", require("./auth/route"));
+
+app.set("view engine", "ejs")
+
 
 
 
@@ -178,6 +207,50 @@ function setUserActiveState(socket, username, state) {
   });
 }
 
+///////////////////////////////
+// Database helper functions //
+///////////////////////////////
+
+const connectDB = require("./db");
+connectDB();
+
+
+
+
+
+var url = "mongodb://localhost:27017/";
+
+function createAccount(username, password){
+  MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("database");
+    var myobj = { username: username, password: password};
+    dbo.collection("users").insertOne(myobj, function(err, res) {
+      if (err) throw err;
+      console.log("1 document inserted", username, password);
+      db.close();
+    });
+  });
+}
+
+function userExists(username){
+  MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("database");
+    dbo.collection("users").findOne({"username":username}, function(err, result) {
+      if (err) throw err;
+      console.log(result)
+      if (result != null){
+        return true
+      }
+      else {
+        db.close();
+        return false
+      }
+    });
+  });
+}
+
 ///////////////////////////
 // IO connection handler //
 ///////////////////////////
@@ -187,6 +260,44 @@ const socketmap = {};
 io.on('connection', (socket) => {
   let userLoggedIn = false;
   let username = false;
+
+  
+  ///////////////////////////////
+  // incoming database functions/
+  ///////////////////////////////
+
+  socket.on("createAccount", req => {
+    var username = req.username;//decrypt(req.username);
+    var password = req.password;//decrypt(req.password);
+    createAccount(username, password);
+  })
+
+  socket.on('simplecall', function(name, fn) {
+    // find if "name" exists
+    fn({ exists: false });
+  });
+
+  socket.on('simplecall2', (callback) => {
+    //var exists = userExists(username);
+    callback(false);
+
+  });
+
+  socket.on("update item", (arg1, arg2, callback) => {
+    console.log(arg1); // 1
+    console.log(arg2); // { name: "updated" }
+    callback({
+      status: "ok"
+    });
+  });
+
+  socket.on('userExists', (username, callback) => {
+    //var exists = userExists(username);
+    callback({data:true});
+
+  });
+
+
   
   ///////////////////////
   // incomming message //
@@ -224,6 +335,10 @@ io.on('connection', (socket) => {
       }
     }
   });
+
+  socket.on("create_db", req => {
+    console.log(req.user)
+  })
 
   socket.on('add_channel', req => {
     if (userLoggedIn) {
