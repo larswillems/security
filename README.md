@@ -20,9 +20,9 @@ The main goal of this project is to secure the implementation, by limiting what 
 
 
 ## How to run
-The server for the chat platform is written in [NodeJS](https://nodejs.org/en/download/), and uses [Socket.IO](https://socket.io/docs/v4/) for communication. The front-end itself is a simple web client utilizing jQuery, Bootstrap and Socket.IO.
+First, make sure to [download and install MongoDB](https://www.mongodb.com/docs/guides/server/install/). Then, make sure to [start MongoDB](https://www.mongodb.com/docs/manual/tutorial/manage-mongodb-processes/).
 
-For the initial setup, open the `Chat` folder in your terminal and execute the following command:
+Next, open the `Chat` folder in your terminal and execute the following commands with root privileges:
 
 ```
 $ npm install
