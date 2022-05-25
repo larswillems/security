@@ -12,9 +12,9 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-username = getCookie("username")
+username = getCookie("username");
 $usernameLabel.text(username); 
-console.log(username)
+console.log(username);
 
 // Prompt for setting a username
 //TODO: replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -23,9 +23,6 @@ console.log(username)
 
 let connected = false;
 let socket = io();
-
-
-
 let modalShowing = false;
 
 $('#addChannelModal').on('hidden.bs.modal', () => modalShowing = false)
@@ -43,7 +40,7 @@ let hmac_Key = "password"; // for HMAC authentication
 // HMAC
 function hmac(ciphertext, iv, passphrase, salt) {
   // parse salt
-  let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt)
+  let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt);
 
   // apply PBKDF2 salt to passphrase
   let PBKDF2_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
