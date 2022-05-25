@@ -31,9 +31,9 @@ $(function() {
 
 
 
-  ////////////////
-  // Encryption //
-  ////////////////
+  //////////////////////
+  // Encryption: HMAC //
+  //////////////////////
 
   let aes_Key = "12345678901234567890123456789012"; // for AES encryption (16 byte key)
   let hmac_Key = "password"; // for HMAC authentication
@@ -53,6 +53,66 @@ $(function() {
     let hash = CryptoJS.HmacSHA512(iv + ciphertext, PBKDF2_passphrase);
 
     return {hash: hash, salt: PBKDF2_salt};
+  }
+
+
+  /////////////////////
+  // Encryption: RSA //
+  /////////////////////
+
+  // Generate RSA keys
+  async function generateRSAkeys() {
+    let keys = await window.crypto.subtle.generateKey(
+      {
+        name: "RSA-OAEP",
+        modulusLength: 4096,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      },
+      false, // "exctratable" is set to false, meaning key cannot be exported or read.
+      ["encrypt", "decrypt"]
+    );
+    return keys;
+  }
+
+  // RSA Encryption
+  function rsaEncrypt(data, keys) {
+    return window.crypto.subtle.encrypt(
+      {name: "RSA-OAEP",},
+      keys.publicKey,
+      data
+    )
+  }
+
+  // RSA Decryption
+  async function rsaDecrypt(data, keys) {
+    return new Uint8Array(await window.crypto.subtle.decrypt(
+        {name: "RSA-OAEP",},
+        keys.privateKey,
+        data
+    ));
+  }
+
+  // test
+  async function encryptDecrypt() {
+    var data = new TextEncoder().encode("hello");
+    console.log("generated data", data);
+    var keys = await generateRSAkeys();
+    var encrypted = await rsaEncrypt(data, keys);
+    console.log("encrypted", encrypted);
+    var finalData = new TextDecoder("utf-8").decode(await rsaDecrypt(encrypted, keys));
+    console.log("decrypted data", finalData);
+  }
+  console.log(encryptDecrypt());
+
+
+  /////////////////////
+  // Encryption: AES //
+  /////////////////////
+
+  // Generate AES key
+  function generateAESkey() {
+    return CryptoJS.lib.WordArray.random(32);
   }
 
   // AES-CTR encryption
