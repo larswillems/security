@@ -41,18 +41,18 @@ $(function() {
   // HMAC
   function hmac(ciphertext, iv, passphrase, salt) {
     // parse salt
-    let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt);
+    let pbkdf2_salt = CryptoJS.enc.Hex.parse(salt);
 
     // apply PBKDF2 salt to passphrase
-    let PBKDF2_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
+    let pbkdf2_passphrase = CryptoJS.PBKDF2(passphrase, pbkdf2_salt, {
       keySize: 128 / 32,
       iterations: 1024
     });
 
     // create hmac hash
-    let hash = CryptoJS.HmacSHA512(iv + ciphertext, PBKDF2_passphrase);
+    let hash = CryptoJS.HmacSHA512(iv + ciphertext, pbkdf2_passphrase);
 
-    return {hash: hash, salt: PBKDF2_salt};
+    return {hash: hash, salt: pbkdf2_salt};
   }
 
 

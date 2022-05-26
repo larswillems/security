@@ -66,9 +66,9 @@ const crypto = require('crypto');
 
 function pbkdf2(password) {
   const salt = crypto.randomBytes(60); 
-  let key = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
+  let hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
 
-  return {key: key, salt: salt};
+  return {hash: hash, salt: salt};
 }
 
 function aesEncrypt (to_encrypt_, key_, iv_) {
