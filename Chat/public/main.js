@@ -6,6 +6,7 @@ $(function() {
   const $usernameLabel = $('#user-name');
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
+  var publicKey = null;
 
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -479,6 +480,7 @@ $(function() {
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
     connected = true;
+    console.log(data)
 
     data.rooms.forEach(
       r => r.history.forEach(
@@ -488,7 +490,6 @@ $(function() {
         }
       )
     );
-
     updateUsers(data.users);
     updateRooms(data.rooms);
     updateChannels(data.publicChannels);
@@ -552,7 +553,15 @@ $(function() {
   ////////////////
 
   socket.on('connect', () => {
-    socket.emit('join', username)
+    callOnStore(function (store) {
+      let getLocalDBkeys = store.get(username);
+      getLocalDBkeys.onsuccess = async function() {
+        publicKey = JSON.stringify(await exportCryptoKey(getLocalDBkeys.result.keys.publicKey));
+        let data = {username: username, publicKey: publicKey};
+        // perform request to server
+        await socket.emit('join', data);
+      }
+    })
   });
 
   socket.on('disconnect', () => {
@@ -560,7 +569,8 @@ $(function() {
 
   socket.on('reconnect', () => {
     // join
-    socket.emit('join', username);
+    let data = {username: username, publicKey: publicKey}
+    socket.emit('join', data)
   });
 
   socket.on('reconnect_error', () => {

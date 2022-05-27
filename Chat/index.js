@@ -105,7 +105,8 @@ function sendToRoom(room, event, data) {
 }
 
 function newUser(name, publicKey) {
-  const user = Users.addUser(name, publicKey);
+  let user = Users.addUser(name);
+  user.publicKey = publicKey;
   const rooms = Rooms.getForcedRooms();
 
   rooms.forEach(room => {
@@ -156,8 +157,6 @@ function getDirectRoom(user_a, user_b) {
 function addUserToRoom(user, room) {
   user.addSubscription(room);
   room.addMember(user);
-
-  console.log(user);
 
   sendToRoom(room, 'update_user', {
     room: room.getId(),
@@ -398,7 +397,10 @@ io.on('connection', (socket) => {
   // user join //
   ///////////////
 
-  socket.on('join', (p_username) => {
+  socket.on('join', (info) => {
+    let p_username = info.username
+    let publicKey = info.publicKey
+
     if (userLoggedIn) 
       return;
 
@@ -406,7 +408,7 @@ io.on('connection', (socket) => {
     userLoggedIn = true;
     socketmap[username] = socket;
 
-    const user = Users.getUser(username) || newUser(username);
+    const user = Users.getUser(username) || newUser(username, publicKey);
     
     const rooms = user.getSubscriptions().map(s => {
       socket.join('room' + s);
@@ -416,7 +418,7 @@ io.on('connection', (socket) => {
     const publicChannels = Rooms.getRooms().filter(r => !r.direct && !r.private);
 
     socket.emit('login', {
-      users: Users.getUsers().map(u => ({username: u.name, active: u.active})),
+      users: Users.getUsers().map(u => ({username: u.name, active: u.active, publickey: u.publicKey})),
       rooms : rooms,
       publicChannels: publicChannels
     });
