@@ -38,14 +38,15 @@ const cyrb53 = function(str, seed = 0) {
 
 
 exports.userAuth = (req, res, next) => {
-  console.log("checking")
     const token = req.cookies.jwt
     const username = req.cookies.username
     const username_hidden = req.cookies.username_hidden
 
-
-
-  console.log(username, username_hidden)
+    if(username==null){
+      return res
+        .status(401)
+        .json("Not authorized. Please login.")
+    }
 
     if (token) {
       jwt.verify(token, jwtSecret, (err, decodedToken) => {

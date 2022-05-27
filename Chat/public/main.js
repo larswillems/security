@@ -15,12 +15,6 @@ $(function() {
 
   username = getCookie("username");
   $usernameLabel.text(username); 
-  console.log(username);
-
-  // Prompt for setting a username
-  //TODO: replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  //let username = prompt("Enter your username:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  //$usernameLabel.text(username);
 
   let connected = false;
   let socket = io();
@@ -467,7 +461,6 @@ $(function() {
 
     // When the client hits ENTER on their keyboard
     if (event.which === 13) {
-      console.log('enter');
       sendMessage();
     }
 
