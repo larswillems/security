@@ -480,6 +480,15 @@ $(function() {
   socket.on('login', (data) => {
     connected = true;
 
+    data.rooms.forEach(
+      r => r.history.forEach(
+        function(part, index, messages) {
+          let msg = decryptProcessedMsg(messages[index], processEncryptedMsg(messages[index]));
+          messages[index] = msg;
+        }
+      )
+    );
+
     updateUsers(data.users);
     updateRooms(data.rooms);
     updateChannels(data.publicChannels);
