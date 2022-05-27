@@ -82,7 +82,6 @@
               getLocalDBkeys.onsuccess = async function() {
                 // if the local client DB does not have RSA keys
                 if (getLocalDBkeys.result == null) {
-                  console.log()
                   //create keys
                   keys = await generateRSAkeys()
                   publicKey = JSON.stringify(await exportCryptoKey(keys.publicKey))

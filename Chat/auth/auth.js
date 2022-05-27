@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken')
 
 const jwtSecret = "2626c90f1b310c1d98a1ce7bbd6bb09ab5c56e3055b087c0a0cf920820905c79c3d8bd";
 const cyrb53 = function(str, seed = 0) {
-  console.log(str)
   let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
   for (let i = 0, ch; i < str.length; i++) {
       ch = str.charCodeAt(i);
