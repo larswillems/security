@@ -4,15 +4,15 @@ const jwt = require('jsonwebtoken')
 const jwtSecret = "2626c90f1b310c1d98a1ce7bbd6bb09ab5c56e3055b087c0a0cf920820905c79c3d8bd";
 // auth.js
 exports.register = async (req, res, next) => {
-    console.log(req.body);
-    const { username, password } = req.body
-    if (password.length < 8) {
-      return res.status(400).json({ message: "Password less than 8 characters" })
+    const { username, password, publicKey } = req.body
+    if (password.length <= 8 || password.length >= 30) {
+      return res.status(400).json({ message: "Password must be between 8 and 30 characters long" })
     }
     try {
       await User.create({
         username,
         password,
+        publicKey
       }).then((user) => {
         const maxAge = 3 * 60 * 60;
         const token = jwt.sign(
@@ -31,10 +31,9 @@ exports.register = async (req, res, next) => {
         res.status(201).json({
           message: "User successfully created",
           user: user._id,
-        });console.log(res.cookie);
+        });
       })
     } catch (err) {
-        console.log(err.message)
       res.status(401).json({
         message: "User not successful created",
         error: err.message,
@@ -68,7 +67,6 @@ exports.login = async (req, res, next) => {
 };
 
 exports.login = async (req, res, next) => {
-    console.log("reached login");
     try {
       const { username, password } = req.body
       const user = await User.findOne({ username, password })

@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken")
 
-
-
 const jwtSecret = "2626c90f1b310c1d98a1ce7bbd6bb09ab5c56e3055b087c0a0cf920820905c79c3d8bd"
 
 exports.adminAuth = (req, res, next) => {

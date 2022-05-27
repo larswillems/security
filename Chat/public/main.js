@@ -69,7 +69,7 @@ $(function() {
         publicExponent: new Uint8Array([1, 0, 1]),
         hash: "SHA-256"
       },
-      false, // "exctratable" is set to false, meaning key cannot be exported or read.
+      false, // "extractable" is set to false, meaning key cannot be exported or read.
       ["encrypt", "decrypt"]
     );
     return keys;
@@ -93,17 +93,58 @@ $(function() {
     ));
   }
 
-  // test
-  async function encryptDecrypt() {
-    var data = new TextEncoder().encode("hello");
-    console.log("generated data", data);
-    var keys = await generateRSAkeys();
-    var encrypted = await rsaEncrypt(data, keys);
-    console.log("encrypted", encrypted);
-    var finalData = new TextDecoder("utf-8").decode(await rsaDecrypt(encrypted, keys));
-    console.log("decrypted data", finalData);
+  // RSA Export publicKey
+  async function exportCryptoKey(publicKey) {
+    const exported = await window.crypto.subtle.exportKey(
+      "jwk",
+      publicKey
+    );
+    return exported;
   }
-  console.log(encryptDecrypt());
+
+  // RSA Import publicKey
+  function importCryptoKey(jwk_publicKey) {
+    return window.crypto.subtle.importKey(
+      "jwk",
+      jwk_publicKey,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256"
+      },
+      true,
+      ["encrypt"]
+    );
+  }
+
+
+  ///////////////////
+  // Local Storage //
+  ///////////////////
+
+  function callOnStore(fn_) { 
+    // Open (or create) the local database
+    var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB;
+    var open = indexedDB.open("MyLocalDatabase", 1);
+
+    open.onupgradeneeded = function() {
+        var db = open.result;
+        // Create an store object for this database
+        var store = db.createObjectStore("MyObjectStore", {keyPath: "id"});
+    };
+
+    open.onsuccess = function() {
+        // Start a new transaction
+        var db = open.result;
+        var tx = db.transaction("MyObjectStore", "readwrite");
+        var store = tx.objectStore("MyObjectStore");
+
+        fn_(store)
+        // Close the db when the transaction is done
+        tx.oncomplete = function() {
+            db.close();
+        };
+    }
+  }
 
 
   /////////////////////
