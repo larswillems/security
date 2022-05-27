@@ -104,8 +104,8 @@ function sendToRoom(room, event, data) {
   io.to('room' + room.getId()).emit(event, data);
 }
 
-function newUser(name) {
-  const user = Users.addUser(name);
+function newUser(name, publicKey) {
+  const user = Users.addUser(name, publicKey);
   const rooms = Rooms.getForcedRooms();
 
   rooms.forEach(room => {
@@ -157,6 +157,8 @@ function addUserToRoom(user, room) {
   user.addSubscription(room);
   room.addMember(user);
 
+  console.log(user);
+
   sendToRoom(room, 'update_user', {
     room: room.getId(),
     username: user,
@@ -177,7 +179,7 @@ function removeUserFromRoom(user, room) {
   });
 }
 
-function addMessageToRoom(roomId, username, msg) {
+function addMessageToRoom(roomId, msg) {
   const room = Rooms.getRoom(roomId);
 
   msg.time = new Date().getTime();
@@ -216,14 +218,14 @@ connectDB();
 
 var url = "mongodb://localhost:27017/";
 
-function createAccount(username, password){
+function createAccount(username, password, publicKey){
   MongoClient.connect(url, function(err, db) {
     if (err) throw err;
     var dbo = db.db("database");
-    var myobj = { username: username, password: password};
+    var myobj = { username: username, password: password, publicKey: publicKey};
     dbo.collection("users").insertOne(myobj, function(err, res) {
       if (err) throw err;
-      console.log("1 document inserted", username, password);
+      console.log("1 document inserted", username, password, publicKey);
       db.close();
     });
   });
@@ -263,36 +265,11 @@ io.on('connection', (socket) => {
   ///////////////////////////////
 
   socket.on("createAccount", req => {
-    var username = req.username;//decrypt(req.username);
-    var password = req.password;//decrypt(req.password);
-    createAccount(username, password);
+    var username = req.username;
+    var password = req.password;
+    var publicKey = req.publicKey;
+    createAccount(username, password, publicKey);
   })
-
-  socket.on('simplecall', function(name, fn) {
-    // find if "name" exists
-    fn({ exists: false });
-  });
-
-  socket.on('simplecall2', (callback) => {
-    //var exists = userExists(username);
-    callback(false);
-
-  });
-
-  socket.on("update item", (arg1, arg2, callback) => {
-    console.log(arg1); // 1
-    console.log(arg2); // { name: "updated" }
-    callback({
-      status: "ok"
-    });
-  });
-
-  socket.on('userExists', (username, callback) => {
-    //var exists = userExists(username);
-    callback({data:true});
-
-  });
-
 
   
   ///////////////////////
@@ -303,7 +280,7 @@ io.on('connection', (socket) => {
     if (userLoggedIn) {
       console.log(msg);
 
-      addMessageToRoom(msg.room, username, msg);
+      addMessageToRoom(msg.room, msg);
     }
   });
 

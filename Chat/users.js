@@ -1,8 +1,9 @@
 const users = {};
 
 class User {
-    constructor(name) {
+    constructor(name, publicKey) {
         this.name = name;
+        this.publicKey = publicKey;
 
         this.active = false;
         this.subscriptions = [];
@@ -34,8 +35,8 @@ class User {
 }
 
 module.exports = {
-    addUser: name => {
-        const user = new User(name);
+    addUser: (name, publicKey) => {
+        const user = new User(name, publicKey);
         users[name] = user;
         return user;
     },

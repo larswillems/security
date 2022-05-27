@@ -288,7 +288,7 @@ $(function() {
     currentRoom = room;
 
     $messages.empty();
-    room.history.forEach(m => addChatMessage(decryptProcessedMsg(m, processEncryptedMsg(m))));
+    room.history.forEach(m => addChatMessage(m));
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -373,7 +373,7 @@ $(function() {
     if (message_hmac_hash_match == message_hmac_hash_received && username_hmac_hash_match == username_hmac_hash_received) {
       authentication = "🟢"; // authenticated.
     } else {
-      authentication = "🔴"; // not authenticated.
+      authentication = "🔴 Not Authenticated. Please refresh. "; // not authenticated.
     }
 
     let processed_msg = {message_ciphertext: message_ciphertext, username_ciphertext: username_ciphertext, 

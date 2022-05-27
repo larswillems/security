@@ -49,22 +49,6 @@
             if(res.status === 400 || res.status === 401){
             return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
             }
-
-            // if request succeeds, store keys
-            callOnStore(function (store) {
-                let putKeys = store.put({id: username, keys: keys});
-                putKeys.onsuccess = async function() {
-                  console.log("Keys successfully stored.", keys)
-
-                  // get
-                  callOnStore(function (store) {
-                    let getKeys = store.get(username);
-                    getKeys.onsuccess = async function() {
-                      console.log("Retrieved stored keys:", getKeys.result)
-                    };
-                  });
-                };
-            });
             // and redirect
             location.assign('/main')
         }
@@ -87,15 +71,21 @@
                   publicKey = JSON.stringify(await exportCryptoKey(keys.publicKey))
                   
                   // perform request to server
-                  performRequest()
+                  await performRequest()
+
+                  // if request succeeds, store keys
+                  callOnStore(function (store) {
+                      let putKeys = store.put({id: username.value, keys: keys});
+                  });
                 }
                 // if the local client DB has RSA keys
                 else {
                   // export public key from local client DB
-                  publicKey = await exportCryptoKey(getLocalDBdata.result.publicKey)
+                  console.log(getLocalDBkeys.result)
+                  publicKey = JSON.stringify(await exportCryptoKey(getLocalDBkeys.result.keys.publicKey))
 
                   // perform request to server
-                  performRequest()
+                  await performRequest()
                 }
               }
             })
