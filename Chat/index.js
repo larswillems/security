@@ -71,30 +71,6 @@ function pbkdf2(password) {
   return {hash: hash, salt: salt};
 }
 
-function aesEncrypt (to_encrypt_, key_, iv_) {
-  let to_encrypt = Buffer.from(to_encrypt_, 'utf8');
-  let key = Buffer.from(key_, 'hex');
-  let iv = Buffer.from(iv_, 'hex');
-
-  const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
-  let encrypted = cipher.update(to_encrypt, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-
-  return encrypted;
-};
-
-function aesDecrypt (encrypted_, key_, iv_) {
-  let encrypted = Buffer.from(encrypted_, 'hex');
-  let key = Buffer.from(key_, 'hex');
-  let iv = Buffer.from(iv_, 'hex');
-
-  const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-
-  return decrypted;
-};
-
 
 ///////////////////////////////
 // Chatroom helper functions //
@@ -178,21 +154,22 @@ function removeUserFromRoom(user, room) {
   });
 }
 
-function addMessageToRoom(roomId, msg) {
+function addMessageToRoom(roomId, data) {
   const room = Rooms.getRoom(roomId);
 
-  msg.time = new Date().getTime();
+  data.msg.time = new Date().getTime();
 
   if (room) {
     sendToRoom(room, 'new message', {
-      username: msg.username,
-      message: msg.message,
-      room: msg.room,
-      time: msg.time,
-      direct: room.direct
+      username: data.msg.username,
+      message: data.msg.message,
+      room: data.msg.room,
+      time: data.msg.time,
+      direct: room.direct,
+      keys: data.keyArray
     });
 
-    room.addMessage(msg);
+    room.addMessage(data);
   }
 }
 
@@ -224,7 +201,6 @@ function createAccount(username, password, publicKey){
     var myobj = { username: username, password: password, publicKey: publicKey};
     dbo.collection("users").insertOne(myobj, function(err, res) {
       if (err) throw err;
-      console.log("1 document inserted", username, password, publicKey);
       db.close();
     });
   });
@@ -236,7 +212,6 @@ function userExists(username){
     var dbo = db.db("database");
     dbo.collection("users").findOne({"username":username}, function(err, result) {
       if (err) throw err;
-      console.log(result)
       if (result != null){
         return true
       }
@@ -275,11 +250,11 @@ io.on('connection', (socket) => {
   // incomming message //
   ///////////////////////
 
-  socket.on('new message', (msg) => {
+  socket.on('new message', (data) => {
     if (userLoggedIn) {
-      console.log(msg);
 
-      addMessageToRoom(msg.room, msg);
+      console.log("hlelloooo", data)
+      addMessageToRoom(data.msg.room, data);
     }
   });
 
@@ -397,9 +372,10 @@ io.on('connection', (socket) => {
   // user join //
   ///////////////
 
-  socket.on('join', (info) => {
-    let p_username = info.username
-    let publicKey = info.publicKey
+  socket.on('join', (data) => {
+
+    let p_username = data.username
+    let publicKey = data.publicKey
 
     if (userLoggedIn) 
       return;
@@ -418,7 +394,7 @@ io.on('connection', (socket) => {
     const publicChannels = Rooms.getRooms().filter(r => !r.direct && !r.private);
 
     socket.emit('login', {
-      users: Users.getUsers().map(u => ({username: u.name, active: u.active, publickey: u.publicKey})),
+      users: Users.getUsers().map(u => ({username: u.name, active: u.active, publicKey: u.publicKey})),
       rooms : rooms,
       publicChannels: publicChannels
     });

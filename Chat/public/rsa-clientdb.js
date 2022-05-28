@@ -95,15 +95,13 @@ function callOnStore(fn_) {
 ////////////////////
 
 async function testCrypto() {
-  var keys = await generateRSAkeys();
-  var exported = await exportCryptoKey(keys.publicKey);
-  var imported = await importCryptoKey(exported);
-  var re_exported = await exportCryptoKey(imported);
-
-  console.log(exported);
-  console.log(imported);
-  console.log(re_exported);
+  let data = new TextEncoder().encode("12345678901234567890123456789012");
+  let keys = await generateRSAkeys();
+  let encrypted = await rsaEncrypt(data, keys);
+  let decrypted = await rsaDecrypt(encrypted, keys);
+  console.log(new TextDecoder("utf-8").decode(decrypted));
 }
+//testCrypto()
 
 // If local database does not already contain RSA keys, create and store them.
 async function testDB() {

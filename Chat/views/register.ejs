@@ -69,14 +69,14 @@
                   //create keys
                   keys = await generateRSAkeys()
                   publicKey = JSON.stringify(await exportCryptoKey(keys.publicKey))
-                  
-                  // perform request to server
-                  await performRequest()
 
                   // if request succeeds, store keys
                   callOnStore(function (store) {
                       let putKeys = store.put({id: username.value, keys: keys});
                   });
+
+                  // perform request to server
+                  await performRequest()
                 }
                 // if the local client DB has RSA keys
                 else {
