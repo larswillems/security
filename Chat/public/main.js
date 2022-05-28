@@ -513,6 +513,7 @@ socket.on('update_room', data => {
   socket.on('login', (data) => {
     connected = true;
     updateUsers(data.users)
+    console.log(data)
 
     // retrieve public key messages
     callOnStore(async function (store) {
