@@ -35,6 +35,7 @@
               body: JSON.stringify({ username: username.value, password: password.value }),
               headers: { 'Content-Type': 'application/json' }
               })
+            console.log(res.status)
             const data = await res.json()
             if (res.status === 400 || res.status === 401) {
               return display.textContent = `${data.message}. ${data.error ? data.error : ''}`

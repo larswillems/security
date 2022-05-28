@@ -19,10 +19,10 @@ const Rooms   = require('./rooms.js');
 
 const {userAuth} = require("./middleware/auth.js");
 
-app.get("/", (req, res) => res.render("home"));
-app.get("/register", (req, res) => res.render("register"));
-app.get("/login", (req, res) => res.render("login"));
-app.get("/main", userAuth, (req, res) => res.render("main"));
+app.get("/", (req, res) => res.render("home"))
+app.get("/register", (req, res) => res.render("register"))
+app.get("/login", (req, res) => res.render("login"))
+app.get("/main", userAuth, (req, res) => res.render("main"))
 
 // Load application config/state
 require('./basicstate.js').setup(Users,Rooms);
@@ -53,7 +53,7 @@ app.use(bodyParser.json());
 //app.use(express.json())
 app.use("/api/auth", require("./auth/route"));
 
-app.set("view engine", "ejs");
+app.set("view engine", "ejs")
 
 
 
@@ -214,6 +214,9 @@ function setUserActiveState(socket, username, state) {
 const connectDB = require("./db");
 connectDB();
 
+
+
+
 var url = "mongodb://localhost:27017/";
 
 function createAccount(username, password){
@@ -253,9 +256,14 @@ function userExists(username){
 
 const socketmap = {};
 
+
+
 io.on('connection', (socket) => {
   let userLoggedIn = false;
   let username = false;
+
+
+
 
   
   ///////////////////////////////

@@ -341,6 +341,13 @@ $(function() {
   }
   window.joinChannel = joinChannel;
 
+
+socket.on('update_room', data => {
+  updateRoom(data.room);
+  if (data.moveto)
+    setRoom(data.room.id);
+});
+
   function addToChannel(user) {
     socket.emit('add_user_to_channel', {channel: currentRoom.id, user: user});   
   }
@@ -464,3 +471,4 @@ $(function() {
   });
 
 });
+

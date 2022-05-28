@@ -11,9 +11,12 @@ const UserSchema = new Mongoose.Schema({
     minlength: 8,
     required: true,
   },
-  role: {
+  publicKey: {
     type: String,
-    default: "Basic",
+    required: true,
+  },
+  seed: {
+    type: String,
     required: true,
   },
 })
