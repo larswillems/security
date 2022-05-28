@@ -300,7 +300,7 @@ $(function() {
     currentRoom = room;
 
     $messages.empty();
-    room.history.forEach(m => addChatMessage(m));
+    room.history.forEach(m => addChatMessage(m.msg));
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -513,6 +513,7 @@ socket.on('update_room', data => {
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
     connected = true;
+    // update rooms and users
     updateUsers(data.users);
     updateRooms(data.rooms);
 
@@ -520,48 +521,38 @@ socket.on('update_room', data => {
       setRoom(data.rooms[0].id);
     }
 
-    data.rooms.forEach(
-      r => r.history.forEach(
-        function(part, index, datum) {
-          let data_msg = datum[index].msg;
-          let data_keys = datum[index].keyArray;
-          var toType = function(obj) {
-            return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
-          }
-          console.log("type", toType(data_keys))
-          console.log(data_msg)
-          console.log(data_keys)
-          data_keys.forEach(async function(entry) {
-            if (entry.username == username) {
-              // get private rsa key
-              callOnStore(async function (store) {
-                var getKeys = await store.get(username);
-                getKeys.onsuccess = async function() {
-                  let rsaKeys = await getKeys.result.keys;
-                  // decrypt the symmetric key
-                  let encryptedAESkey = entry.encryptedKey;
-                  console.log(rsaKeys)
-                  console.log(encryptedAESkey)
-                  let decryptedAESkey = new TextDecoder("utf-8").decode(await rsaDecrypt(encryptedAESkey, rsaKeys));
-                  
-                  // decrypt the actual message
-                  datum[index] = decryptProcessedMsg(data_msg, processEncryptedMsg(data_msg, decryptedAESkey), decryptedAESkey);
+    // retrieve public key messages
+    callOnStore(async function (store) {
+      var getKeys = store.get(username);
+      getKeys.onsuccess = async function() {
+        let rsaKeys = getKeys.result.keys;
 
+        // retrieve every message
+        for (const room of data.rooms) {
+          for (const message of room.history) {
+            for (const keyEntry of message.keyArray) {
+              if (keyEntry.username == username) {
+                let encryptedAESkey = keyEntry.encryptedKey
+
+                // decrypt every message
+                await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                  let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                  message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+                }).then(() => {
+                  // update rooms and users
                   updateUsers(data.users);
                   updateRooms(data.rooms);
-                  //updateChannels(data.publicChannels);
 
                   if (data.rooms.length > 0) {
                     setRoom(data.rooms[0].id);
                   }
-                
-                };
-              });
+                })
+              }
             }
-          })
+          }
         }
-      )
-    );
+      }
+    })
   });
 
   socket.on('update_public_channels', (data) => {
@@ -570,37 +561,35 @@ socket.on('update_room', data => {
 
   // Whenever the server emits 'new message', update the chat body
   socket.on('new message', (data) => {
-    
-    // search for encrypted symmetric key in data
-    data.keys.forEach(async function(entry) {
-      if (entry.username == username) {
-        // get private rsa key
-        callOnStore(async function (store) {
-          var getKeys = await store.get(username);
-          getKeys.onsuccess = async function() {
-            let rsaKeys = await getKeys.result.keys;
-            // decrypt the symmetric key
-            let encryptedAESkey = entry.encryptedKey;
-            let decryptedAESkey = new TextDecoder("utf-8").decode(await rsaDecrypt(encryptedAESkey, rsaKeys));
-            
-            // decrypt the actual message
-            let msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
 
-            // add message
-            const roomId = msg.room;
-            const room = rooms[roomId];
+    // retrieve public key messages
+    callOnStore(async function (store) {
+      var getKeys = store.get(username);
+      getKeys.onsuccess = async function() {
+        let rsaKeys = getKeys.result.keys;
 
-            if (room) {
-              room.history.push(msg);
-            }
-            if (roomId == currentRoom.id)
-              addChatMessage(msg);
-            else
-              messageNotify(msg);
-            };
-        });
+        // retrieve every message
+        for (const keyEntry of data.keys) {
+          if (keyEntry.username == username) {
+            let encryptedAESkey = keyEntry.encryptedKey
+
+            // decrypt message
+            await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+              let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+              msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
+
+              // add message
+              const roomId = msg.room;
+              const room = rooms[roomId];
+              if (room) room.history.push(msg);
+              if (roomId == currentRoom.id) addChatMessage(msg);
+              else messageNotify(msg);
+            })
+          }
+        }
       }
     })
+
   });
 
   socket.on('update_user', data => {

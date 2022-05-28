@@ -9,7 +9,7 @@ const UserSchema = new Mongoose.Schema({
   password: {
     type: String,
     minlength: 8,
-    maxlength: 30,
+    maxlength: 256,
     required: true,
   },
   publicKey: {
