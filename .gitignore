@@ -1,2 +1,2 @@
-/Chat/*.pem
-/Chat/node_modules/
+Chat/*.pem
+Chat/node_modules/**

@@ -61,6 +61,11 @@ exports.userAuth = async (req, res, next) => {
     var hashed_username = hash(username, salt).toString();
 
     console.log("userauth", username, salt, hashed_username, hashed_username.toString())
+    if(username==null){
+      return res
+        .status(401)
+        .json("Not authorized. Please login.")
+    }
 
     if (token) {
       jwt.verify(token, jwtSecret, (err, decodedToken) => {

@@ -3,6 +3,7 @@ const users = {};
 class User {
     constructor(name) {
         this.name = name;
+        this.publicKey = null;
 
         this.active = false;
         this.subscriptions = [];
@@ -34,7 +35,7 @@ class User {
 }
 
 module.exports = {
-    addUser: name => {
+    addUser: (name) => {
         const user = new User(name);
         users[name] = user;
         return user;

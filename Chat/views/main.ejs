@@ -5,7 +5,6 @@
     <title>Chat</title>
 
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="styleLogin.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
   </head>
   <body id="upper">
@@ -13,8 +12,10 @@
     <div class="main">
 
       <div class="sidebar">
+        <input id="logout" type="submit" value="logout" /><br />
+
         <div class="chat-title">
-          <span id="chat-name">Message board</span>
+          <span id="chat-name">Message Board</span>
           <span id="user-name" class="online">...</span>
         </div>
   
@@ -26,7 +27,7 @@
         </div>
   
         <div class="sidebar-list user-list">
-          <span class="sidebar-header">Users</span>
+          <span class="sidebar-header">Other Users</span>
           <ul id="user-list">
           </ul>
         </div>
@@ -141,7 +142,15 @@
   
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.5/umd/popper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.1/js/bootstrap.min.js"></script>
-    `;
+
+    <script>
+      const logout = document.getElementById('logout');
+      logout.addEventListener("click", (e) => {
+        e.preventDefault()
+        document.cookie = "username=test; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.replace('/login');
+      })
+    </script>
 
 
   </body>

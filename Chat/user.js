@@ -9,6 +9,11 @@ const UserSchema = new Mongoose.Schema({
   password: {
     type: String,
     minlength: 8,
+    maxlength: 30,
+    required: true,
+  },
+  publicKey: {
+    type: String,
     required: true,
   },
   publicKey: {

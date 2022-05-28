@@ -6,6 +6,7 @@ $(function() {
   const $usernameLabel = $('#user-name');
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
+  var publicKey = null;
 
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -15,12 +16,6 @@ $(function() {
 
   username = getCookie("username");
   $usernameLabel.text(username); 
-  console.log(username);
-
-  // Prompt for setting a username
-  //TODO: replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  //let username = prompt("Enter your username:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  //$usernameLabel.text(username);
 
   let connected = false;
   let socket = io();
@@ -31,49 +26,159 @@ $(function() {
 
 
 
-  ////////////////
-  // Encryption //
-  ////////////////
-
-  let aes_Key = "12345678901234567890123456789012"; // for AES encryption (16 byte key)
-  let hmac_Key = "password"; // for HMAC authentication
+  //////////////////////
+  // Encryption: HMAC //
+  //////////////////////
 
   // HMAC
   function hmac(ciphertext, iv, passphrase, salt) {
     // parse salt
-    let PBKDF2_salt = CryptoJS.enc.Hex.parse(salt);
+    let pbkdf2_salt = CryptoJS.enc.Hex.parse(salt);
 
     // apply PBKDF2 salt to passphrase
-    let PBKDF2_passphrase = CryptoJS.PBKDF2(passphrase, PBKDF2_salt, {
+    let pbkdf2_passphrase = CryptoJS.PBKDF2(passphrase, pbkdf2_salt, {
       keySize: 128 / 32,
       iterations: 1024
     });
 
     // create hmac hash
-    let hash = CryptoJS.HmacSHA512(iv + ciphertext, PBKDF2_passphrase);
+    let hash = CryptoJS.HmacSHA512(iv + ciphertext, pbkdf2_passphrase);
 
-    return {hash: hash, salt: PBKDF2_salt};
+    return {hash: hash, salt: pbkdf2_salt};
   }
 
-  // AES-CTR encryption
-  function aesEncrypt(msg, key) {
-    let key_parsed = CryptoJS.enc.Hex.parse(key);
-    let iv_parsed = CryptoJS.lib.WordArray.random(16);
 
-    let encryption = CryptoJS.AES.encrypt(msg, key_parsed, {
+  /////////////////////
+  // Encryption: RSA //
+  /////////////////////
+
+  // Generate RSA keys
+  async function generateRSAkeys() {
+    let keys = await window.crypto.subtle.generateKey(
+      {
+        name: "RSA-OAEP",
+        modulusLength: 4096,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      },
+      false, // "extractable" is set to false, meaning key cannot be exported or read.
+      ["encrypt", "decrypt"]
+    );
+    return keys;
+  }
+
+  // RSA Encryption
+  function rsaEncrypt(data, publicKey) {
+    return window.crypto.subtle.encrypt(
+      {name: "RSA-OAEP",},
+      publicKey,
+      data
+    )
+  }
+
+  // RSA Decryption
+  async function rsaDecrypt(data, keys) {
+    return new Uint8Array(await window.crypto.subtle.decrypt(
+        {name: "RSA-OAEP",},
+        keys.privateKey,
+        data
+    ));
+  }
+
+  // RSA Export publicKey
+  async function exportCryptoKey(publicKey) {
+    const exported = await window.crypto.subtle.exportKey(
+      "jwk",
+      publicKey
+    );
+    return exported;
+  }
+
+  // RSA Import publicKey
+  async function importCryptoKey(jwk_publicKey) {
+    return await window.crypto.subtle.importKey(
+      "jwk",
+      jwk_publicKey,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256"
+      },
+      true,
+      ["encrypt"]
+    );
+  }
+
+
+  ///////////////////
+  // Local Storage //
+  ///////////////////
+
+  function callOnStore(fn_) { 
+    // Open (or create) the local database
+    var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB;
+    var open = indexedDB.open("MyLocalDatabase", 1);
+
+    open.onupgradeneeded = function() {
+        var db = open.result;
+        // Create an store object for this database
+        var store = db.createObjectStore("MyObjectStore", {keyPath: "id"});
+    };
+
+    open.onsuccess = function() {
+        // Start a new transaction
+        var db = open.result;
+        var tx = db.transaction("MyObjectStore", "readwrite");
+        var store = tx.objectStore("MyObjectStore");
+
+        fn_(store)
+        // Close the db when the transaction is done
+        tx.oncomplete = function() {
+            db.close();
+        };
+    }
+  }
+
+
+  /////////////////////
+  // Encryption: AES //
+  /////////////////////
+
+  // AES-CTR encryption
+  function aesEncrypt(message, username) {
+    let aes_Key = CryptoJS.lib.WordArray.random(32);
+    let hmac_Key = CryptoJS.SHA256(aes_Key.toString());
+    let iv_message = CryptoJS.lib.WordArray.random(16);
+    let iv_username = CryptoJS.lib.WordArray.random(16);
+    while (iv_message==iv_username) {iv_username = CryptoJS.lib.WordArray.random(16);}
+
+    // encrypt message
+    let encryption_message = CryptoJS.AES.encrypt(message, aes_Key, {
       mode: CryptoJS.mode.CTR,
-      iv: iv_parsed,
+      iv: iv_message,
       padding: CryptoJS.pad.NoPadding
     });
     
-    // the encrypted message is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
-    let iv = iv_parsed.toString();
-    let ciphertext = encryption.toString();
-    let hmac_salt = CryptoJS.lib.WordArray.random(16).toString();
-    let hmac_str = hmac(ciphertext, iv, hmac_Key, hmac_salt).hash.toString();
-    let encrypted_msg = iv + ciphertext + hmac_str + hmac_salt;
+    // encrypt username
+    let encryption_username = CryptoJS.AES.encrypt(username, aes_Key, {
+      mode: CryptoJS.mode.CTR,
+      iv: iv_username,
+      padding: CryptoJS.pad.NoPadding
+    });
 
-    return encrypted_msg;
+    // the encrypted message is a concatenation of the IV, ciphertext, HMAC hash and HMAC salt:
+    let iv_m = iv_message.toString();
+    let ciphertext_m = encryption_message.toString();
+    let hmac_salt_m = CryptoJS.lib.WordArray.random(16).toString();
+    let hmac_str_m = hmac(ciphertext_m, iv_m, hmac_Key, hmac_salt_m).hash.toString();
+    let encrypted_message = iv_m + ciphertext_m + hmac_str_m + hmac_salt_m;
+
+    let iv_u = iv_username.toString();
+    let ciphertext_u = encryption_username.toString();
+    let hmac_salt_u = CryptoJS.lib.WordArray.random(16).toString();
+    let hmac_str_u = hmac(ciphertext_u, iv_u, hmac_Key, hmac_salt_u).hash.toString();
+    let encrypted_username = iv_u + ciphertext_u + hmac_str_u + hmac_salt_u;
+
+    return {encrypted_message: encrypted_message, encrypted_username: encrypted_username, key: aes_Key};
   }
 
   // AES-CTR decryption
@@ -102,10 +207,12 @@ $(function() {
   // User List //
   ///////////////
 
-  let users = {};
+  let users = [];
 
   function updateUsers(p_users) {
-    p_users.forEach(u => users[u.username] = u);
+    p_users.forEach(u => users.push(u));
+    uniq = [...new Set(users)];
+    users = uniq;
     updateUserList();
   }
 
@@ -193,7 +300,7 @@ $(function() {
     currentRoom = room;
 
     $messages.empty();
-    room.history.forEach(m => addChatMessage(decryptProcessedMsg(m, processEncryptedMsg(m))));
+    room.history.forEach(m => addChatMessage(m));
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -239,26 +346,41 @@ $(function() {
     }
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     // retrieve input and sanitize against XSS attacks
     let input = $inputMessage.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
     // encrypt sanitized input:
-    let encrypted_message = aesEncrypt(input, aes_Key);
-    let encrypted_username = aesEncrypt(username, aes_Key);
+    let encryption = aesEncrypt(input, username);
+    let encrypted_message = encryption.encrypted_message;
+    let encrypted_username = encryption.encrypted_username;
+    let aes_Key = encryption.key;
 
-    if (encrypted_message && connected && currentRoom !== false) {
+    // encrypt key for each recipient
+    var keyArray = [];
+
+    for (const user of users) {
+      var to_encrypt = new TextEncoder().encode(aes_Key);
+          await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
+            await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
+              keyArray.push({username: user.username, encryptedKey: encryptedKey});
+            })
+          }) 
+    }
+
+    if (encryption && connected && currentRoom !== false) {
       $inputMessage.val('');
       const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
       
       //addChatMessage(msg);
-      socket.emit('new message', msg);
+      socket.emit('new message', {msg: msg, keyArray: keyArray});
     }
   }
+  
 
-
-  function processEncryptedMsg(msg) {
+  function processEncryptedMsg(msg, aes_Key) {
     let authentication = "";
+    let hmac_Key = CryptoJS.SHA256(aes_Key);
 
     // extract IV, HMAC, and ciphertext from message and username
     let message_iv = msg.message.slice(0,32);
@@ -288,10 +410,10 @@ $(function() {
     return processed_msg;
   }
 
-  function decryptProcessedMsg(msg, processed_msg) {
+  function decryptProcessedMsg(msg, processed_msg, key) {
     // decrypt message and username
-    msg.message = aesDecrypt(processed_msg.message_ciphertext, aes_Key, processed_msg.message_iv);
-    msg.username = aesDecrypt(processed_msg.username_ciphertext, aes_Key, processed_msg.username_iv);
+    msg.message = aesDecrypt(processed_msg.message_ciphertext, key, processed_msg.message_iv);
+    msg.username = aesDecrypt(processed_msg.username_ciphertext, key, processed_msg.username_iv);
     msg.authentication = processed_msg.authentication;
     return msg;
   }
@@ -373,7 +495,6 @@ socket.on('update_room', data => {
 
     // When the client hits ENTER on their keyboard
     if (event.which === 13) {
-      console.log('enter');
       sendMessage();
     }
 
@@ -392,14 +513,55 @@ socket.on('update_room', data => {
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
     connected = true;
-
     updateUsers(data.users);
     updateRooms(data.rooms);
-    updateChannels(data.publicChannels);
 
     if (data.rooms.length > 0) {
       setRoom(data.rooms[0].id);
     }
+
+    data.rooms.forEach(
+      r => r.history.forEach(
+        function(part, index, datum) {
+          let data_msg = datum[index].msg;
+          let data_keys = datum[index].keyArray;
+          var toType = function(obj) {
+            return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
+          }
+          console.log("type", toType(data_keys))
+          console.log(data_msg)
+          console.log(data_keys)
+          data_keys.forEach(async function(entry) {
+            if (entry.username == username) {
+              // get private rsa key
+              callOnStore(async function (store) {
+                var getKeys = await store.get(username);
+                getKeys.onsuccess = async function() {
+                  let rsaKeys = await getKeys.result.keys;
+                  // decrypt the symmetric key
+                  let encryptedAESkey = entry.encryptedKey;
+                  console.log(rsaKeys)
+                  console.log(encryptedAESkey)
+                  let decryptedAESkey = new TextDecoder("utf-8").decode(await rsaDecrypt(encryptedAESkey, rsaKeys));
+                  
+                  // decrypt the actual message
+                  datum[index] = decryptProcessedMsg(data_msg, processEncryptedMsg(data_msg, decryptedAESkey), decryptedAESkey);
+
+                  updateUsers(data.users);
+                  updateRooms(data.rooms);
+                  //updateChannels(data.publicChannels);
+
+                  if (data.rooms.length > 0) {
+                    setRoom(data.rooms[0].id);
+                  }
+                
+                };
+              });
+            }
+          })
+        }
+      )
+    );
   });
 
   socket.on('update_public_channels', (data) => {
@@ -407,22 +569,38 @@ socket.on('update_room', data => {
   });
 
   // Whenever the server emits 'new message', update the chat body
-  socket.on('new message', (encrypted_msg) => {
-    // decrypt message
-    let msg = decryptProcessedMsg(encrypted_msg, processEncryptedMsg(encrypted_msg));
+  socket.on('new message', (data) => {
+    
+    // search for encrypted symmetric key in data
+    data.keys.forEach(async function(entry) {
+      if (entry.username == username) {
+        // get private rsa key
+        callOnStore(async function (store) {
+          var getKeys = await store.get(username);
+          getKeys.onsuccess = async function() {
+            let rsaKeys = await getKeys.result.keys;
+            // decrypt the symmetric key
+            let encryptedAESkey = entry.encryptedKey;
+            let decryptedAESkey = new TextDecoder("utf-8").decode(await rsaDecrypt(encryptedAESkey, rsaKeys));
+            
+            // decrypt the actual message
+            let msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
 
-    // add message
-    const roomId = msg.room;
-    const room = rooms[roomId];
+            // add message
+            const roomId = msg.room;
+            const room = rooms[roomId];
 
-    if (room) {
-      room.history.push(msg);
-    }
-
-    if (roomId == currentRoom.id)
-      addChatMessage(msg);
-    else
-      messageNotify(msg);
+            if (room) {
+              room.history.push(msg);
+            }
+            if (roomId == currentRoom.id)
+              addChatMessage(msg);
+            else
+              messageNotify(msg);
+            };
+        });
+      }
+    })
   });
 
   socket.on('update_user', data => {
@@ -456,7 +634,15 @@ socket.on('update_room', data => {
   ////////////////
 
   socket.on('connect', () => {
-    socket.emit('join', username)
+    callOnStore(function (store) {
+      let getLocalDBkeys = store.get(username);
+      getLocalDBkeys.onsuccess = async function() {
+        publicKey = JSON.stringify(await exportCryptoKey(getLocalDBkeys.result.keys.publicKey));
+        let data = {username: username, publicKey: publicKey};
+        // perform request to server
+        await socket.emit('join', data);
+      }
+    })
   });
 
   socket.on('disconnect', () => {
@@ -464,7 +650,8 @@ socket.on('update_room', data => {
 
   socket.on('reconnect', () => {
     // join
-    socket.emit('join', username);
+    let data = {username: username, publicKey: publicKey}
+    socket.emit('join', data)
   });
 
   socket.on('reconnect_error', () => {

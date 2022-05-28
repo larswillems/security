@@ -5,7 +5,6 @@ router.route("/register").post(register);
 router.route("/login").post(login);
 
 function checkParams(){
-    console.log("idkdkdk")
     return true;
 }
 

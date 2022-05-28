@@ -66,34 +66,10 @@ const crypto = require('crypto');
 
 function pbkdf2(password) {
   const salt = crypto.randomBytes(60); 
-  let key = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
+  let hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
 
-  return {key: key, salt: salt};
+  return {hash: hash, salt: salt};
 }
-
-function aesEncrypt (to_encrypt_, key_, iv_) {
-  let to_encrypt = Buffer.from(to_encrypt_, 'utf8');
-  let key = Buffer.from(key_, 'hex');
-  let iv = Buffer.from(iv_, 'hex');
-
-  const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
-  let encrypted = cipher.update(to_encrypt, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-
-  return encrypted;
-};
-
-function aesDecrypt (encrypted_, key_, iv_) {
-  let encrypted = Buffer.from(encrypted_, 'hex');
-  let key = Buffer.from(key_, 'hex');
-  let iv = Buffer.from(iv_, 'hex');
-
-  const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-
-  return decrypted;
-};
 
 
 ///////////////////////////////
@@ -104,8 +80,9 @@ function sendToRoom(room, event, data) {
   io.to('room' + room.getId()).emit(event, data);
 }
 
-function newUser(name) {
-  const user = Users.addUser(name);
+function newUser(name, publicKey) {
+  let user = Users.addUser(name);
+  user.publicKey = publicKey;
   const rooms = Rooms.getForcedRooms();
 
   rooms.forEach(room => {
@@ -177,21 +154,22 @@ function removeUserFromRoom(user, room) {
   });
 }
 
-function addMessageToRoom(roomId, username, msg) {
+function addMessageToRoom(roomId, data) {
   const room = Rooms.getRoom(roomId);
 
-  msg.time = new Date().getTime();
+  data.msg.time = new Date().getTime();
 
   if (room) {
     sendToRoom(room, 'new message', {
-      username: msg.username,
-      message: msg.message,
-      room: msg.room,
-      time: msg.time,
-      direct: room.direct
+      username: data.msg.username,
+      message: data.msg.message,
+      room: data.msg.room,
+      time: data.msg.time,
+      direct: room.direct,
+      keys: data.keyArray
     });
 
-    room.addMessage(msg);
+    room.addMessage(data);
   }
 }
 
@@ -219,14 +197,13 @@ connectDB();
 
 var url = "mongodb://localhost:27017/";
 
-function createAccount(username, password){
+function createAccount(username, password, publicKey){
   MongoClient.connect(url, function(err, db) {
     if (err) throw err;
     var dbo = db.db("database");
-    var myobj = { username: username, password: password};
+    var myobj = { username: username, password: password, publicKey: publicKey};
     dbo.collection("users").insertOne(myobj, function(err, res) {
       if (err) throw err;
-      console.log("1 document inserted", username, password);
       db.close();
     });
   });
@@ -238,7 +215,6 @@ function userExists(username){
     var dbo = db.db("database");
     dbo.collection("users").findOne({"username":username}, function(err, result) {
       if (err) throw err;
-      console.log(result)
       if (result != null){
         return true
       }
@@ -271,47 +247,22 @@ io.on('connection', (socket) => {
   ///////////////////////////////
 
   socket.on("createAccount", req => {
-    var username = req.username;//decrypt(req.username);
-    var password = req.password;//decrypt(req.password);
-    createAccount(username, password);
+    var username = req.username;
+    var password = req.password;
+    var publicKey = req.publicKey;
+    createAccount(username, password, publicKey);
   })
-
-  socket.on('simplecall', function(name, fn) {
-    // find if "name" exists
-    fn({ exists: false });
-  });
-
-  socket.on('simplecall2', (callback) => {
-    //var exists = userExists(username);
-    callback(false);
-
-  });
-
-  socket.on("update item", (arg1, arg2, callback) => {
-    console.log(arg1); // 1
-    console.log(arg2); // { name: "updated" }
-    callback({
-      status: "ok"
-    });
-  });
-
-  socket.on('userExists', (username, callback) => {
-    //var exists = userExists(username);
-    callback({data:true});
-
-  });
-
 
   
   ///////////////////////
   // incomming message //
   ///////////////////////
 
-  socket.on('new message', (msg) => {
+  socket.on('new message', (data) => {
     if (userLoggedIn) {
-      console.log(msg);
 
-      addMessageToRoom(msg.room, username, msg);
+      console.log("hlelloooo", data)
+      addMessageToRoom(data.msg.room, data);
     }
   });
 
@@ -429,7 +380,11 @@ io.on('connection', (socket) => {
   // user join //
   ///////////////
 
-  socket.on('join', (p_username) => {
+  socket.on('join', (data) => {
+
+    let p_username = data.username
+    let publicKey = data.publicKey
+
     if (userLoggedIn) 
       return;
 
@@ -437,7 +392,7 @@ io.on('connection', (socket) => {
     userLoggedIn = true;
     socketmap[username] = socket;
 
-    const user = Users.getUser(username) || newUser(username);
+    const user = Users.getUser(username) || newUser(username, publicKey);
     
     const rooms = user.getSubscriptions().map(s => {
       socket.join('room' + s);
@@ -447,7 +402,7 @@ io.on('connection', (socket) => {
     const publicChannels = Rooms.getRooms().filter(r => !r.direct && !r.private);
 
     socket.emit('login', {
-      users: Users.getUsers().map(u => ({username: u.name, active: u.active})),
+      users: Users.getUsers().map(u => ({username: u.name, active: u.active, publicKey: u.publicKey})),
       rooms : rooms,
       publicChannels: publicChannels
     });
