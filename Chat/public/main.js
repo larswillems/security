@@ -236,7 +236,7 @@ $(function() {
 
     $userList.empty();
     for (let [un, user] of Object.entries(users)) {
-      if (username !== user.username)
+      if (username !== user.username) {
         $userList.append(`
           <li onclick="setDirectRoom(this)" data-direct="${user.username}" class="${user.active ? "online" : "offline"}">${user.username}</li>
         `);
@@ -244,6 +244,7 @@ $(function() {
         $uta.append(`
           <button type="button" class="list-group-item list-group-item-action" data-dismiss="modal" onclick="addToChannel('${user.username}')">${user.username}</button>
         `); 
+      }
     };
   }
 
@@ -320,7 +321,9 @@ $(function() {
         .attr('data-room', room.id);
 
     } else {
-      $('#channel-name').text("#" + room.name);
+      let sign = "# ";
+      if (room.private) sign = "$ ";
+      $('#channel-name').text(sign + room.name);
       $('#channel-description').text(`👤 ${room.members.length} | ${room.description}`);
       $roomList.find(`li[data-room=${room.id}]`).addClass("active").removeClass("unread");
     }
@@ -423,6 +426,8 @@ $(function() {
   }
 
   function addChatMessage(msg) {
+    if (msg.authentication == null) return
+
     // display time and message
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
                                                         hour  : "numeric", 
@@ -470,6 +475,7 @@ $(function() {
 
 socket.on('update_room', data => {
   updateRoom(data.room);
+  updateRoomList();
   if (data.moveto)
     setRoom(data.room.id);
 });
@@ -657,6 +663,9 @@ socket.on('update_room', data => {
         let data = {username: username, publicKey: publicKey};
         // perform request to server
         await socket.emit('join', data);
+      }
+      getLocalDBkeys.onerror = () => {
+        alert("Could not retrieve registration data (i.e. local keys).")
       }
     })
   });
