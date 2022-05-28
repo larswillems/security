@@ -179,10 +179,7 @@ function setUserActiveState(socket, username, state) {
   if (user)
     user.setActiveState(state);
   
-  socket.broadcast.emit('user_state_change', {
-    username: username,
-    active: state
-  });
+  socket.broadcast.emit('user_state_change', {user});
 }
 
 ///////////////////////////////

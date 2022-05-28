@@ -216,11 +216,16 @@ $(function() {
     updateUserList();
   }
 
-  function updateUser(username, active) {
-    if (!users[username])
-      users[username] = {username: username};
-
-    users[username].active = active;
+  function updateUser(user_data) {
+    var found = false;
+    for (const u of users) {
+      if (u.username == user_data.name) {
+        found = true;
+        users[users.indexOf(u)].active = user_data.active;
+      }
+    }
+    if (!found)
+      users.push({username: user_data.name, active: user_data.active, publicKey: user_data.publicKey})
 
     updateUserList();
   }
@@ -514,6 +519,8 @@ socket.on('update_room', data => {
     connected = true;
     updateUsers(data.users)
     updateRooms(data.rooms)
+    updateRoomList();
+
     if (data.rooms.length > 0) {
       setRoom(data.rooms[0].id);
     }
@@ -623,7 +630,7 @@ socket.on('update_room', data => {
   });
 
   socket.on('user_state_change', (data) => {
-    updateUser(data.username, data.active);
+    updateUser(data.user);
   });
 
   socket.on('update_room', data => {
