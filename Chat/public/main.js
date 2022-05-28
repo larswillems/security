@@ -250,7 +250,6 @@ $(function() {
 
   function updateRooms(p_rooms) {
     rooms = p_rooms;
-    updateRoomList();
   }
 
   function updateRoom(room) {
@@ -513,13 +512,7 @@ socket.on('update_room', data => {
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
     connected = true;
-    // update rooms and users
-    updateUsers(data.users);
-    updateRooms(data.rooms);
-
-    if (data.rooms.length > 0) {
-      setRoom(data.rooms[0].id);
-    }
+    updateUsers(data.users)
 
     // retrieve public key messages
     callOnStore(async function (store) {
@@ -531,6 +524,21 @@ socket.on('update_room', data => {
         for (const room of data.rooms) {
           for (const message of room.history) {
             for (const keyEntry of message.keyArray) {
+
+              // initialize empty rooms and users
+              const clone = structuredClone(data);
+              console.log(clone)
+              for (const r of clone.rooms) {
+                r.history = [];
+              }
+              updateRooms(clone.rooms);
+              updateRoomList();
+
+              if (data.rooms.length > 0) {
+                setRoom(data.rooms[0].id);
+              }
+
+              // fill room with messages if they can be decrypted
               if (keyEntry.username == username) {
                 let encryptedAESkey = keyEntry.encryptedKey
 
@@ -538,10 +546,12 @@ socket.on('update_room', data => {
                 await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
                   let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
                   message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
-                }).then(() => {
                   // update rooms and users
-                  updateUsers(data.users);
                   updateRooms(data.rooms);
+
+                }).then(() => {
+
+                  updateRoomList();
 
                   if (data.rooms.length > 0) {
                     setRoom(data.rooms[0].id);
