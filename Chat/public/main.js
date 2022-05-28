@@ -513,7 +513,10 @@ socket.on('update_room', data => {
   socket.on('login', (data) => {
     connected = true;
     updateUsers(data.users)
-    console.log(data)
+    updateRooms(data.rooms)
+    if (data.rooms.length > 0) {
+      setRoom(data.rooms[0].id);
+    }
 
     // retrieve public key messages
     callOnStore(async function (store) {
@@ -526,7 +529,7 @@ socket.on('update_room', data => {
         for (const r of clone.rooms) {
           r.history = [];
         }
-        updateRooms(clone.rooms);
+        updateRooms(clone.rooms)
         updateUsers(data.users)
         if (data.rooms.length > 0) {
           setRoom(data.rooms[0].id);
@@ -593,9 +596,14 @@ socket.on('update_room', data => {
               // add message
               const roomId = msg.room;
               const room = rooms[roomId];
-              if (room) room.history.push(msg);
-              if (roomId == currentRoom.id) addChatMessage(msg);
-              else messageNotify(msg);
+              if (room) {
+                room.history.push({msg: msg, keyArray: data.keys});
+              }
+              if (roomId == currentRoom.id) {
+                addChatMessage(msg)
+              } else { 
+                messageNotify(msg)
+              }
             })
           }
         }
