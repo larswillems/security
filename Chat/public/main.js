@@ -520,23 +520,21 @@ socket.on('update_room', data => {
       getKeys.onsuccess = async function() {
         let rsaKeys = getKeys.result.keys;
 
+        // initialize empty rooms and users
+        var clone = structuredClone(data);
+        for (const r of clone.rooms) {
+          r.history = [];
+        }
+        updateRooms(clone.rooms);
+        updateUsers(data.users)
+        if (data.rooms.length > 0) {
+          setRoom(data.rooms[0].id);
+        }
+
         // retrieve every message
         for (const room of data.rooms) {
           for (const message of room.history) {
             for (const keyEntry of message.keyArray) {
-
-              // initialize empty rooms and users
-              const clone = structuredClone(data);
-              console.log(clone)
-              for (const r of clone.rooms) {
-                r.history = [];
-              }
-              updateRooms(clone.rooms);
-              updateRoomList();
-
-              if (data.rooms.length > 0) {
-                setRoom(data.rooms[0].id);
-              }
 
               // fill room with messages if they can be decrypted
               if (keyEntry.username == username) {
@@ -546,15 +544,18 @@ socket.on('update_room', data => {
                 await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
                   let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
                   message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+
                   // update rooms and users
-                  updateRooms(data.rooms);
+                  var index = data.rooms.indexOf(room)
+                  clone.rooms[index].history.push(message)
+
+                  updateRooms(clone.rooms);
 
                 }).then(() => {
-
+                  updateUsers(data.users)
                   updateRoomList();
-
-                  if (data.rooms.length > 0) {
-                    setRoom(data.rooms[0].id);
+                  if (clone.rooms.length > 0) {
+                    setRoom(clone.rooms[0].id);
                   }
                 })
               }
