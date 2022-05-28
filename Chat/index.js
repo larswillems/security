@@ -258,7 +258,7 @@ io.on('connection', (socket) => {
   socket.on('new message', (data) => {
     if (userLoggedIn) {
 
-      console.log("hlelloooo", data)
+      console.log(data)
       addMessageToRoom(data.msg.room, data);
     }
   });
@@ -295,7 +295,6 @@ io.on('connection', (socket) => {
   socket.on('add_channel', req => {
     if (userLoggedIn) {
       const user = Users.getUser(username);
-      console.log(req);
       const room = newChannel(req.name, req.description, req.private, user);
       const roomCID = 'room' + room.getId();
       socket.join(roomCID);
