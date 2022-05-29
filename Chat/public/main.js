@@ -325,7 +325,6 @@ $(function() {
   let currentRoom = false;
 
   function setRoom(id) {
-    console.log(rooms)
     let oldRoom = currentRoom;
 
     var room = null
@@ -336,8 +335,8 @@ $(function() {
     }
     currentRoom = room;
 
-
     $messages.empty();
+    room.history.forEach(m => console.log("setROom", m.msg));
     room.history.forEach(m => addChatMessage(m.msg));
 
     $userList.find('li').removeClass("active");
@@ -459,6 +458,7 @@ $(function() {
   }
 
   function addChatMessage(msg) {
+    console.log("add msg", msg)
     if (msg.authentication == null) return
 
     // display time and message
@@ -506,49 +506,50 @@ $(function() {
   window.joinChannel = joinChannel;
 
 
-socket.on('update_room', data => {
-  // retrieve public key messages
-  callOnStore(async function (store) {
-    var getKeys = store.get(username);
-    getKeys.onsuccess = async function() {
-      let rsaKeys = getKeys.result.keys;
+  socket.on('update_room', data => {
+    console.log('update room')
+    // retrieve public key messages
+    callOnStore(async function (store) {
+      var getKeys = store.get(username);
+      getKeys.onsuccess = async function() {
+        let rsaKeys = getKeys.result.keys;
 
-      // initialize empty rooms and users
-      var clone = structuredClone(data);
-      clone.room.history = [];
+        // initialize empty rooms and users
+        var clone = structuredClone(data);
+        clone.room.history = [];
 
-      updateRoom(clone.room);
+        updateRoom(clone.room);
 
-      // retrieve every message
-      for (const message of data.room.history) {
-        for (const keyEntry of message.keyArray) {
+        // retrieve every message
+        for (const message of data.room.history) {
+          for (const keyEntry of message.keyArray) {
 
-          // fill room with messages if they can be decrypted
-          if (keyEntry.username == username) {
-            let encryptedAESkey = keyEntry.encryptedKey
+            // fill room with messages if they can be decrypted
+            if (keyEntry.username == username) {
+              let encryptedAESkey = keyEntry.encryptedKey
 
-            // decrypt every message
-            await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-              let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-              message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+              // decrypt every message
+              await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
 
-              // add message to room
-              clone.room.history.push(message)
+                // add message to room
+                clone.room.history.push(message)
 
-            }).then(() => {
-              updateRoom(clone.room)
-              updateRoomList();
-            })
+              }).then(() => {
+                updateRoom(clone.room)
+                updateRoomList();
+                
+                if (data.moveto)
+                  setRoom(data.room.id);
+              })
+            }
           }
         }
       }
-    }
-  })
-
-  if (data.moveto)
-    setRoom(data.room.id);
-    
-});
+    })
+      
+  });
 
   function addToChannel(user) {
     socket.emit('add_user_to_channel', {channel: currentRoom.id, user: user});   
@@ -641,8 +642,8 @@ socket.on('update_room', data => {
                 }).then(() => {
                   updateUsers(data.users)
                   updateRoomList();
-                  if (clone.rooms.length > 0) {
-                    setRoom(clone.rooms[0].id);
+                  if (data.rooms.length > 0) {
+                    setRoom(data.rooms[0].id);
                   }
                 })
               }
