@@ -325,6 +325,7 @@ $(function() {
   let currentRoom = false;
 
   function setRoom(id) {
+    console.log(rooms)
     let oldRoom = currentRoom;
 
     var room = null
@@ -484,7 +485,7 @@ $(function() {
     if (msg.direct)
       $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
     else
-      $roomList.find(`li[data-room=${msg.room.replace(/</g, "&lt;").replace(/>/g, "&gt;")}]`).addClass("unread");
+      $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
   }
 
 
@@ -675,9 +676,15 @@ socket.on('update_room', data => {
               let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
               msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
 
-              // add message
+              // find room in rooms
               const roomId = msg.room;
-              const room = rooms[roomId];
+              for (const r of rooms) {
+                if (r.id == roomId) {
+                  room = r;
+                }
+              }
+
+              // add message
               if (room) {
                 room.history.push({msg: msg, keyArray: data.keys});
               }
