@@ -78,6 +78,20 @@
                 <label for="channel-description" class="col-form-label">Channel description:</label>
                 <textarea class="form-control" id="inp-channel-description"></textarea>
               </div>
+              <div class="form-group">
+                <label for="options" class="col-form-label">Security:</label>
+              </div>
+              <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                <label class="btn btn-secondary active">
+                  <input type="radio" name="encryption" id="inp-e2e" autocomplete="off" checked> E2E-Encryption
+                </label>
+                <label class="btn btn-secondary">
+                  <input type="radio" name="encryption" id="inp-no-e2e" autocomplete="off"> No Encryption
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="options" class="col-form-label">Privacy:</label>
+              </div>
               <div class="btn-group btn-group-toggle" data-toggle="buttons">
                 <label class="btn btn-secondary active">
                   <input type="radio" name="private" id="inp-public" autocomplete="off" checked> Public

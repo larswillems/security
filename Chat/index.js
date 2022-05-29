@@ -98,10 +98,11 @@ function newRoom(name, user, options) {
   return room;
 }
 
-function newChannel(name, description, private, user) {
+function newChannel(name, description, private, encrypted, user) {
   return newRoom(name, user, {
     description: description,
-    private: private
+    private: private,
+    encrypted: encrypted
   });
 }
 
@@ -303,7 +304,8 @@ io.on('connection', (socket) => {
   socket.on('add_channel', req => {
     if (userLoggedIn) {
       const user = Users.getUser(username);
-      const room = newChannel(req.name, req.description, req.private, user);
+      const room = newChannel(req.name, req.description, req.private, req.encrypted, user);
+      console.log(room)
       const roomCID = 'room' + room.getId();
       socket.join(roomCID);
 

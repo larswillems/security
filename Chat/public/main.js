@@ -296,24 +296,29 @@ $(function() {
   function updateRoomList() {
     $roomList.empty();
     rooms.forEach(r => {
-      if (!r.direct)
+      if (!r.direct) {
+        if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
         $roomList.append(`
           <li 
             onclick="setRoom(${r.id})"  
             data-room="${r.id}" 
             class="${r.private ? "private" : "public"}">
-              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
             </li>
         `);
+      }
     });
   }
 
 
   function updateChannels(channels) {
     const c = $("#channelJoins");
+    let e2e;
 
     c.empty();
     channels.forEach(r => {
+      console.log(r)
+      if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
       if (!rooms[r.id]) 
         c.append(`
           <button 
@@ -321,7 +326,7 @@ $(function() {
             class="list-group-item list-group-item-action" 
             data-dismiss="modal" 
             onclick="joinChannel(${r.id})">
-              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
             </button>
         `); 
     });
@@ -362,9 +367,11 @@ $(function() {
         .attr('data-room', room.id);
 
     } else {
-      let sign = "# ";
-      if (room.private) sign = "$ ";
-      $('#channel-name').text(sign + room.name.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+      let privacy = "# ";
+      let e2e = "";
+      if (room.private) privacy = "$ ";
+      if (room.encrypted) e2e = " 🔒";
+      $('#channel-name').text(privacy + room.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e);
       $('#channel-description').text(`👤 ${room.members.length} | ${room.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
       $roomList.find(`li[data-room=${room.id}]`).addClass("active").removeClass("unread");
     }
@@ -375,7 +382,7 @@ $(function() {
 
   function setDirectRoomHeader(user) {
     $('#channel-name').text("@ " + user.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
-    $('#channel-description').text(`Direct message with ${user.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
+    $('#channel-description').text(`E2E-encrypted direct message with ${user.replace(/</g, "&lt;").replace(/>/g, "&gt;")}` + " 🔒");
   }
 
   function setToDirectRoom(user) {
@@ -528,8 +535,11 @@ $(function() {
     const name = $("#inp-channel-name").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const description = $("#inp-channel-description").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const private = $('#inp-private').is(':checked');
+    const encrypted = $('#inp-e2e').is(':checked');
 
-    socket.emit('add_channel', {name: name, description: description, private: private});
+    console.log(encrypted)
+
+    socket.emit('add_channel', {name: name, description: description, private: private, encrypted: encrypted});
   }
   window.addChannel = addChannel;
 
@@ -541,7 +551,6 @@ $(function() {
 
 
   socket.on('update_room', data => {
-    console.log(data)
     // if room has no message history or is not encrypted, update rooms immediately
     if (!data.room.encrypted || data.room.history.length == 0) {
       updateRoom(data.room);
