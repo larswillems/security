@@ -238,11 +238,22 @@ $(function() {
     for (let [un, user] of Object.entries(users)) {
       if (username !== user.username) {
         $userList.append(`
-          <li onclick="setDirectRoom(this)" data-direct="${user.username}" class="${user.active ? "online" : "offline"}">${user.username}</li>
+          <li 
+          onclick="setDirectRoom(this)" 
+          data-direct="${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}" 
+          class="${user.active ? "online" : "offline"}">
+            ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+          </li>
         `);
         // append it also to the add user list
         $uta.append(`
-          <button type="button" class="list-group-item list-group-item-action" data-dismiss="modal" onclick="addToChannel('${user.username}')">${user.username}</button>
+          <button 
+            type="button" 
+            class="list-group-item list-group-item-action" 
+            data-dismiss="modal" 
+            onclick="addToChannel('${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}')">
+              ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            </button>
         `); 
       }
     };
@@ -273,7 +284,12 @@ $(function() {
     rooms.forEach(r => {
       if (!r.direct)
         $roomList.append(`
-          <li onclick="setRoom(${r.id})"  data-room="${r.id}" class="${r.private ? "private" : "public"}">${r.name}</li>
+          <li 
+            onclick="setRoom(${r.id})"  
+            data-room="${r.id}" 
+            class="${r.private ? "private" : "public"}">
+              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            </li>
         `);
     });
   }
@@ -286,7 +302,13 @@ $(function() {
     channels.forEach(r => {
       if (!rooms[r.id]) 
         c.append(`
-          <button type="button" class="list-group-item list-group-item-action" data-dismiss="modal" onclick="joinChannel(${r.id})">${r.name}</button>
+          <button 
+            type="button" 
+            class="list-group-item list-group-item-action" 
+            data-dismiss="modal" 
+            onclick="joinChannel(${r.id})">
+              ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            </button>
         `); 
     });
   }
@@ -323,8 +345,8 @@ $(function() {
     } else {
       let sign = "# ";
       if (room.private) sign = "$ ";
-      $('#channel-name').text(sign + room.name);
-      $('#channel-description').text(`👤 ${room.members.length} | ${room.description}`);
+      $('#channel-name').text(sign + room.name.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+      $('#channel-description').text(`👤 ${room.members.length} | ${room.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
       $roomList.find(`li[data-room=${room.id}]`).addClass("active").removeClass("unread");
     }
 
@@ -333,8 +355,8 @@ $(function() {
   window.setRoom = setRoom;
 
   function setDirectRoomHeader(user) {
-    $('#channel-name').text(user);
-    $('#channel-description').text(`Direct message with ${user}`);
+    $('#channel-name').text(user.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+    $('#channel-description').text(`Direct message with ${user.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
   }
 
   function setToDirectRoom(user) {
@@ -437,10 +459,10 @@ $(function() {
       <div class="message">
         <div class="message-avatar"></div>
         <div class="message-textual">
-          <span class="message-user">${msg.username}</span>
-          <span class="message-authentication" title="Authentication Status">${msg.authentication}</span>
+          <span class="message-user">${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+          <span class="message-authentication" title="Authentication Status">${msg.authentication.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
           <span class="message-time">${"(" + time + ")"}</span>
-          <span class="message-content">${msg.message}</span>
+          <span class="message-content">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
         </div>
       </div>
     `);
@@ -450,9 +472,9 @@ $(function() {
 
   function messageNotify(msg) {
     if (msg.direct)
-      $userList.find(`li[data-direct="${msg.username}"]`).addClass('unread');
+      $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
     else
-      $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
+      $roomList.find(`li[data-room=${msg.room.replace(/</g, "&lt;").replace(/>/g, "&gt;")}]`).addClass("unread");
   }
 
 
