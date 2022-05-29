@@ -503,7 +503,7 @@ $(function() {
     }
 
     // display time and message
-    let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
+    let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: true, 
                                                         hour  : "numeric", 
                                                         minute: "numeric"});
 
