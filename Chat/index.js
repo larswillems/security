@@ -165,11 +165,16 @@ function addMessageToRoom(roomId, data) {
       message: data.msg.message,
       room: data.msg.room,
       time: data.msg.time,
+      keys: data.keyArray,
       direct: room.direct,
-      keys: data.keyArray
+      encrypted: room.encrypted
     });
 
+    if (!room.encrypted) {
+      data.msg.authentication = "";
+    }
     room.addMessage(data);
+    console.log(data)
   }
 }
 
@@ -261,7 +266,6 @@ io.on('connection', (socket) => {
       console.log("An error occured: message too long")
     }
     else if (userLoggedIn) {
-      console.log(data)
       addMessageToRoom(data.msg.room, data);
     }
   });

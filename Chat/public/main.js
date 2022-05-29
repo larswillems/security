@@ -345,6 +345,8 @@ $(function() {
     }
     currentRoom = room;
 
+    console.log(currentRoom)
+
     $messages.empty();
     room.history.forEach(m => addChatMessage(m.msg));
 
@@ -408,30 +410,41 @@ $(function() {
       return
     }
     else {
+      // array of public keys
+      var keyArray = [];
+
       // sanitize input against XSS attacks
       let input = read_input.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-      // encrypt sanitized input
-      let encryption = aesEncrypt(input, username);
-      let encrypted_message = encryption.encrypted_message;
-      let encrypted_username = encryption.encrypted_username;
-      let aes_Key = encryption.key;
+      // define default message and username
+      let m = input;
+      let u = username;
 
-      // encrypt key for each recipient
-      var keyArray = [];
+      if (currentRoom.encrypted) {
+        // encrypt sanitized input
+        let encryption = aesEncrypt(input, username);
+        let encrypted_message = encryption.encrypted_message;
+        let encrypted_username = encryption.encrypted_username;
+        let aes_Key = encryption.key;
 
-      for (const user of users) {
-        var to_encrypt = new TextEncoder().encode(aes_Key);
-            await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
-              await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
-                keyArray.push({username: user.username, encryptedKey: encryptedKey});
-              })
-            }) 
+        // encrypt key for each recipient
+        for (const user of users) {
+          var to_encrypt = new TextEncoder().encode(aes_Key);
+              await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
+                await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
+                  keyArray.push({username: user.username, encryptedKey: encryptedKey});
+                })
+              }) 
+        }
+
+        // replace m and u
+        m = encrypted_message;
+        u = encrypted_username;
       }
 
-      if (encryption && connected && currentRoom !== false) {
+      if (m && connected && currentRoom !== false) {
         $inputMessage.val('');
-        const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
+        const msg = {username: u, message: m, room: currentRoom.id};
         
         socket.emit('new message', {msg: msg, keyArray: keyArray});
       }
@@ -480,7 +493,9 @@ $(function() {
   }
 
   function addChatMessage(msg) {
-    if (msg.authentication == null) return
+    if (msg.authentication == null) {
+      return
+    }
 
     // display time and message
     let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
@@ -506,7 +521,7 @@ $(function() {
     if (msg.direct)
       $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
     else
-      $roomList.find(`li[data-room=${msg.room.replace(/</g, "&lt;").replace(/>/g, "&gt;")}]`).addClass("unread");
+      $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
   }
 
 
@@ -528,16 +543,16 @@ $(function() {
 
 
   socket.on('update_room', data => {
-    if (data.room.history.length == 0) {
+    // if room has no message history or is not encrypted, update rooms immediately
+    if (!data.room.encrypted || data.room.history.length == 0) {
       updateRoom(data.room);
       updateRoomList();
 
       if (data.moveto)
         setRoom(data.room.id);
 
+    // else, dencrypt first
     } else {
-      // room has message history, which is encrypted
-
       // retrieve public key messages
       callOnStore(async function (store) {
         var getKeys = store.get(username);
@@ -555,7 +570,7 @@ $(function() {
           for (const message of data.room.history) {
             for (const keyEntry of message.keyArray) {
               // fill room with messages if they can be decrypted
-              if (keyEntry.username == username) {
+              if (room.encrypted && keyEntry.username == username) {
                 let encryptedAESkey = keyEntry.encryptedKey
 
                 // decrypt every message
@@ -639,10 +654,12 @@ $(function() {
       getKeys.onsuccess = async function() {
         let rsaKeys = getKeys.result.keys;
 
-        // initialize empty rooms and users
+        // initialize empty encrypted rooms, and users
         var clone = structuredClone(data);
         for (const r of clone.rooms) {
-          r.history = [];
+          if (r.encrypted) {
+            r.history = [];
+          }
         }
         updateRooms(clone.rooms)
         updateUsers(data.users)
@@ -650,11 +667,10 @@ $(function() {
           setRoom(data.rooms[0].id);
         }
 
-        // retrieve every message
+        // retrieve every room
         for (const room of data.rooms) {
           for (const message of room.history) {
             for (const keyEntry of message.keyArray) {
-
               // fill room with messages if they can be decrypted
               if (keyEntry.username == username) {
                 let encryptedAESkey = keyEntry.encryptedKey
@@ -691,45 +707,70 @@ $(function() {
 
   // Whenever the server emits 'new message', update the chat body
   socket.on('new message', (data) => {
+    const roomId = data.room
+    var room
 
-    // retrieve public key messages
-    callOnStore(async function (store) {
-      var getKeys = store.get(username);
-      getKeys.onsuccess = async function() {
-        let rsaKeys = getKeys.result.keys;
+    // if the room is not e2e-encrypted, add message immediately
+    if (!data.encrypted) {
+      // authentication is n/a
+      let msg = data
+      msg.authentication = "";
 
-        // retrieve every message
-        for (const keyEntry of data.keys) {
-          if (keyEntry.username == username) {
-            let encryptedAESkey = keyEntry.encryptedKey
-
-            // decrypt message
-            await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-              let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-              msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
-
-              // find room in rooms
-              const roomId = msg.room;
-              for (const r of rooms) {
-                if (r.id == roomId) {
-                  room = r;
-                }
-              }
-
-              // add message
-              if (room) {
-                room.history.push({msg: msg, keyArray: data.keys});
-              }
-              if (roomId == currentRoom.id) {
-                addChatMessage(msg)
-              } else { 
-                messageNotify(msg)
-              }
-            })
-          }
+      // find room in rooms
+      for (const r of rooms) {
+        if (r.id == roomId) {
+          room = r;
         }
       }
-    })
+      // add message
+      if (room) {
+        room.history.push({msg: msg, keyArray:[]});
+      }
+      if (roomId == currentRoom.id) {
+        addChatMessage(msg);
+      }
+      else {messageNotify(msg);}
+    }
+
+    // else, decrypt message
+    else {
+      // retrieve public key messages
+      callOnStore(async function (store) {
+        var getKeys = store.get(username);
+        getKeys.onsuccess = async function() {
+          let rsaKeys = getKeys.result.keys;
+
+          // retrieve every message
+          for (const keyEntry of data.keys) {
+            if (keyEntry.username == username) {
+              let encryptedAESkey = keyEntry.encryptedKey
+
+              // decrypt message
+              await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
+
+                // find room in rooms
+                for (const r of rooms) {
+                  if (r.id == roomId) {
+                    room = r;
+                  }
+                }
+
+                // add message
+                if (room) {
+                  room.history.push({msg: msg, keyArray: data.keys});
+                }
+                if (roomId == currentRoom.id) {
+                  addChatMessage(msg)
+                } 
+                else {messageNotify(msg)}
+              })
+            }
+          }
+        }
+      })
+    }
 
   });
 
@@ -745,12 +786,6 @@ $(function() {
 
   socket.on('user_state_change', (data) => {
     updateUser(data.user);
-  });
-
-  socket.on('update_room', data => {
-    updateRoom(data.room);
-    if (data.moveto)
-      setRoom(data.room.id);
   });
 
   socket.on('remove_room', data => {
@@ -791,4 +826,3 @@ $(function() {
   });
 
 });
-

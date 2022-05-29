@@ -11,6 +11,7 @@ class Room {
         this.forceMembership = !!options.forceMembership;
         this.private         = !!options.private;
         this.direct          = !!options.direct;
+        this.encrypted       = !!options.encrypted;
   
         this.members = [];
         this.history = [];
