@@ -61,8 +61,8 @@
         // when form is being submitted:
         form.addEventListener('submit', async (e) => {
           // check input lengths
-          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8) {
-            alert("Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long.")
+          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8 || password.value.length > 30) {
+            alert("Invalid input. Username should be between 1 and 30 (alphanumeric) characters long. Password should be at least 8 (alphanumeric) characters long.")
           }
           else {
             e.preventDefault()
@@ -72,7 +72,7 @@
             try {
               // check local client DB for keys
               callOnStore(function (store) {
-                let getLocalDBkeys = store.get(username.value);
+                let getLocalDBkeys = store.get(username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
                 getLocalDBkeys.onsuccess = async function() {
                   // if the local client DB does not have RSA keys
                   if (getLocalDBkeys.result == null) {
@@ -82,7 +82,7 @@
 
                     // if request succeeds, store keys
                     callOnStore(function (store) {
-                        let putKeys = store.put({id: username.value, keys: keys});
+                        let putKeys = store.put({id: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), keys: keys});
                     });
 
                     // perform request to server

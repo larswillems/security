@@ -34,9 +34,9 @@
         const display = document.querySelector('.error')
         form.addEventListener('submit', async (e) => {
           // check input lengths
-          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8) {
-            alert("Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long.")
-          } 
+          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8 || password.value.length > 30) {
+            alert("Invalid input. Username should be between 1 and 30 (alphanumeric) characters long. Password should be at least 8 (alphanumeric) characters long.")
+          }
           else {
             e.preventDefault()
             display.textContent = ''

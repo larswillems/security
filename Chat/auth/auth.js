@@ -29,8 +29,8 @@ const cyrb53 = function(str, seed = 0) {
 // auth.js
 exports.register = async (req, res, next) => {
     const { username, password, publicKey } = req.body
-    if (password.length <= 8 || password.length >= 30) {
-      return res.status(400).json({ message: "Password must be between 8 and 30 characters long" })
+    if (password.length < 8 || password.length > 30 || username.length < 1 || username.length > 30) {
+      return res.status(400).json({ message: "Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long." })
     }
     try {
       var salt = generateSalt(); 
