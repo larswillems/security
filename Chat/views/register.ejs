@@ -55,45 +55,50 @@
 
         // when form is being submitted:
         form.addEventListener('submit', async (e) => {
-          e.preventDefault()
-          display.textContent = ''
-
-          // process submit
-          try {
-            // check local client DB for keys
-            callOnStore(function (store) {
-              let getLocalDBkeys = store.get(username.value);
-              getLocalDBkeys.onsuccess = async function() {
-                // if the local client DB does not have RSA keys
-                if (getLocalDBkeys.result == null) {
-                  //create keys
-                  keys = await generateRSAkeys()
-                  publicKey = JSON.stringify(await exportCryptoKey(keys.publicKey))
-
-                  // if request succeeds, store keys
-                  callOnStore(function (store) {
-                      let putKeys = store.put({id: username.value, keys: keys});
-                  });
-
-                  // perform request to server
-                  await performRequest()
-                }
-                // if the local client DB has RSA keys
-                else {
-                  // export public key from local client DB
-                  console.log(getLocalDBkeys.result)
-                  publicKey = JSON.stringify(await exportCryptoKey(getLocalDBkeys.result.keys.publicKey))
-
-                  // perform request to server
-                  await performRequest()
-                }
-              }
-            })
-
-          } catch (err) {
-            console.log(err.message)
+          // check input lengths
+          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8) {
+            alert("Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long.")
           }
+          else {
+            e.preventDefault()
+            display.textContent = ''
 
+            // process submit
+            try {
+              // check local client DB for keys
+              callOnStore(function (store) {
+                let getLocalDBkeys = store.get(username.value);
+                getLocalDBkeys.onsuccess = async function() {
+                  // if the local client DB does not have RSA keys
+                  if (getLocalDBkeys.result == null) {
+                    //create keys
+                    keys = await generateRSAkeys()
+                    publicKey = JSON.stringify(await exportCryptoKey(keys.publicKey))
+
+                    // if request succeeds, store keys
+                    callOnStore(function (store) {
+                        let putKeys = store.put({id: username.value, keys: keys});
+                    });
+
+                    // perform request to server
+                    await performRequest()
+                  }
+                  // if the local client DB has RSA keys
+                  else {
+                    // export public key from local client DB
+                    console.log(getLocalDBkeys.result)
+                    publicKey = JSON.stringify(await exportCryptoKey(getLocalDBkeys.result.keys.publicKey))
+
+                    // perform request to server
+                    await performRequest()
+                  }
+                }
+              })
+
+            } catch (err) {
+              console.log(err.message)
+            }
+          }
         })
       </script>
     </div>

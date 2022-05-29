@@ -256,8 +256,11 @@ io.on('connection', (socket) => {
   ///////////////////////
 
   socket.on('new message', (data) => {
-    if (userLoggedIn) {
-
+    // limit message size
+    if (data.msg.message.length > 14000) {
+      console.log("error: message too long")
+    }
+    else if (userLoggedIn) {
       console.log(data)
       addMessageToRoom(data.msg.room, data);
     }

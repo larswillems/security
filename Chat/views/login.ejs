@@ -28,24 +28,31 @@
         const password = document.querySelector('#password')
         const display = document.querySelector('.error')
         form.addEventListener('submit', async (e) => {
-          e.preventDefault()
-          display.textContent = ''
-          try {
-            const res = await fetch('/api/auth/login', {
-              method: 'POST',
-              // sanitize against XSS attacks by replacing HTML tags
-              body: JSON.stringify({ username: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), 
-                                    password: password.value.replace(/</g, "&lt;").replace(/>/g, "&gt;") }),
-              headers: { 'Content-Type': 'application/json' }
-              })
-            console.log(res.status)
-            const data = await res.json()
-            if (res.status === 400 || res.status === 401) {
-              return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
+          // check input lengths
+          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8) {
+            alert("Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long.")
+          } 
+          else {
+            e.preventDefault()
+            display.textContent = ''
+
+            try {
+              const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                // sanitize against XSS attacks by replacing HTML tags
+                body: JSON.stringify({ username: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), 
+                                      password: password.value.replace(/</g, "&lt;").replace(/>/g, "&gt;") }),
+                headers: { 'Content-Type': 'application/json' }
+                })
+              console.log(res.status)
+              const data = await res.json()
+              if (res.status === 400 || res.status === 401) {
+                return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
+              }
+              location.assign('/main')
+            } catch (err) {
+                console.log(err.message)
             }
-            location.assign('/main')
-          } catch (err) {
-              console.log(err.message)
           }
         })
         </script>

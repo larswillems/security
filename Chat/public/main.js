@@ -400,11 +400,14 @@ $(function() {
 
     // limit message size
     if (read_input.val().length > 10000) {
-      alert("Message too long. Maximum message size is 10,000 characters.")
-    
+      alert("Message too long.")
     // encrypt and send message
-    } else {
-
+    }
+    else if (read_input.val().length == 0) {
+      // user pressed enter but there is no message => do nothing and return
+      return
+    }
+    else {
       // sanitize input against XSS attacks
       let input = read_input.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
