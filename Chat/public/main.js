@@ -345,8 +345,6 @@ $(function() {
     }
     currentRoom = room;
 
-    console.log("setroom", rooms)
-
     $messages.empty();
     room.history.forEach(m => addChatMessage(m.msg));
 
@@ -397,33 +395,43 @@ $(function() {
   }
 
   async function sendMessage() {
-    // retrieve input and sanitize against XSS attacks
-    let input = $inputMessage.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // retrieve input
+    let read_input = $inputMessage
 
-    // encrypt sanitized input:
-    let encryption = aesEncrypt(input, username);
-    let encrypted_message = encryption.encrypted_message;
-    let encrypted_username = encryption.encrypted_username;
-    let aes_Key = encryption.key;
+    // limit message size
+    if (read_input.val().length > 10000) {
+      alert("Message too long. Maximum message size is 10,000 characters.")
+    
+    // encrypt and send message
+    } else {
 
-    // encrypt key for each recipient
-    var keyArray = [];
+      // sanitize input against XSS attacks
+      let input = read_input.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    for (const user of users) {
-      var to_encrypt = new TextEncoder().encode(aes_Key);
-          await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
-            await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
-              keyArray.push({username: user.username, encryptedKey: encryptedKey});
-            })
-          }) 
-    }
+      // encrypt sanitized input
+      let encryption = aesEncrypt(input, username);
+      let encrypted_message = encryption.encrypted_message;
+      let encrypted_username = encryption.encrypted_username;
+      let aes_Key = encryption.key;
 
-    if (encryption && connected && currentRoom !== false) {
-      $inputMessage.val('');
-      const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
-      
-      //addChatMessage(msg);
-      socket.emit('new message', {msg: msg, keyArray: keyArray});
+      // encrypt key for each recipient
+      var keyArray = [];
+
+      for (const user of users) {
+        var to_encrypt = new TextEncoder().encode(aes_Key);
+            await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
+              await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
+                keyArray.push({username: user.username, encryptedKey: encryptedKey});
+              })
+            }) 
+      }
+
+      if (encryption && connected && currentRoom !== false) {
+        $inputMessage.val('');
+        const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
+        
+        socket.emit('new message', {msg: msg, keyArray: keyArray});
+      }
     }
   }
   
