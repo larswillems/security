@@ -495,7 +495,7 @@ $(function() {
     if (msg.direct)
       $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
     else
-      $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
+      $roomList.find(`li[data-room=${msg.room.replace(/</g, "&lt;").replace(/>/g, "&gt;")}]`).addClass("unread");
   }
 
 
