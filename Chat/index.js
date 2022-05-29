@@ -109,6 +109,7 @@ function newDirectRoom(user_a, user_b) {
   const room = Rooms.addRoom(`Direct-${user_a.name}-${user_b.name}`, {
     direct: true,
     private: true,
+    encrypted: true,
   });
 
   addUserToRoom(user_a, room);

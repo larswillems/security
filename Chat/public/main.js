@@ -345,8 +345,6 @@ $(function() {
     }
     currentRoom = room;
 
-    console.log(currentRoom)
-
     $messages.empty();
     room.history.forEach(m => addChatMessage(m.msg));
 
@@ -543,6 +541,7 @@ $(function() {
 
 
   socket.on('update_room', data => {
+    console.log(data)
     // if room has no message history or is not encrypted, update rooms immediately
     if (!data.room.encrypted || data.room.history.length == 0) {
       updateRoom(data.room);
@@ -570,7 +569,7 @@ $(function() {
           for (const message of data.room.history) {
             for (const keyEntry of message.keyArray) {
               // fill room with messages if they can be decrypted
-              if (room.encrypted && keyEntry.username == username) {
+              if (data.room.encrypted && keyEntry.username == username) {
                 let encryptedAESkey = keyEntry.encryptedKey
 
                 // decrypt every message
