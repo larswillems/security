@@ -45,8 +45,8 @@
               const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 // sanitize against XSS attacks by replacing HTML tags
-                body: JSON.stringify({ username: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), 
-                                      password: password.value.replace(/</g, "&lt;").replace(/>/g, "&gt;") }),
+                body: JSON.stringify({ username: username.value, 
+                                      password: password.value }),
                 headers: { 'Content-Type': 'application/json' }
                 })
               console.log(res.status)

@@ -52,11 +52,12 @@ exports.register = async (req, res, next) => {
         );
         var hashed_username = hash(username, salt.toString())
 
-        res.cookie("username", username.toString(), {httpOnly:false, secure:true, maxAge: maxAge * 1000});
-        res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, secure:true, maxAge: maxAge * 1000});
+        res.cookie("username", username.toString(), {httpOnly:false, sameSite: true, secure: true, maxAge: maxAge * 1000});
+        res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, sameSite: true, secure: true, maxAge: maxAge * 1000});
         res.cookie("jwt", token, {
           httpOnly: true, 
-          secure:true,
+          secure: true,
+          sameSite: true,
           maxAge: maxAge * 1000, // 3hrs in ms
         });
         res.status(201).json({
@@ -132,11 +133,12 @@ exports.login = async (req, res, next) => {
             }
           );
           var hashed_username = hash(username, salt.toString())
-          res.cookie("username", username.toString(), {httpOnly:false, secure:true, maxAge: maxAge * 1000});
-          res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, secure:true, maxAge: maxAge * 1000});
+          res.cookie("username", username.toString(), {httpOnly:false, sameSite: true, secure: true, maxAge: maxAge * 1000});
+          res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, sameSite: true, secure: true, maxAge: maxAge * 1000});
           res.cookie("jwt", token, {
             httpOnly: true,
-            secure:true,
+            secure: true,
+            sameSite: true,
             maxAge: maxAge * 1000, // 3 hours in ms
           });
           res.status(201).json({
@@ -172,7 +174,8 @@ exports.chats = async (req, res, next) => {
         );
         res.cookie("jwt", token, {
           httpOnly: true,
-          secure:true,
+          secure: true,
+          sameSite: true,
           maxAge: maxAge * 1000, // 3 hours in ms
         });
         res.status(201).json({

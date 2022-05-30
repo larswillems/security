@@ -44,8 +44,8 @@
           const res = await fetch('/api/auth/register', {
             method: 'POST',
             // sanitize against XSS attacks by replacing HTML tags
-            body: JSON.stringify({ username: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), 
-                                  password: password.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+            body: JSON.stringify({ username: username.value, 
+                                  password: password.value,
                                   publicKey: publicKey
                                 }),
             headers: { 'Content-Type': 'application/json' }
@@ -72,7 +72,7 @@
             try {
               // check local client DB for keys
               callOnStore(function (store) {
-                let getLocalDBkeys = store.get(username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+                let getLocalDBkeys = store.get(username.value);
                 getLocalDBkeys.onsuccess = async function() {
                   // if the local client DB does not have RSA keys
                   if (getLocalDBkeys.result == null) {
@@ -82,7 +82,7 @@
 
                     // if request succeeds, store keys
                     callOnStore(function (store) {
-                        let putKeys = store.put({id: username.value.replace(/</g, "&lt;").replace(/>/g, "&gt;"), keys: keys});
+                        let putKeys = store.put({id: username.value, keys: keys});
                     });
 
                     // perform request to server

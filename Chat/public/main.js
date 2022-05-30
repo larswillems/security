@@ -317,7 +317,6 @@ $(function() {
 
     c.empty();
     channels.forEach(r => {
-      console.log(r)
       if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
       if (!rooms[r.id]) 
         c.append(`
@@ -536,8 +535,6 @@ $(function() {
     const description = $("#inp-channel-description").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const private = $('#inp-private').is(':checked');
     const encrypted = $('#inp-e2e').is(':checked');
-
-    console.log(encrypted)
 
     socket.emit('add_channel', {name: name, description: description, private: private, encrypted: encrypted});
   }
