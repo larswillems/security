@@ -14,7 +14,7 @@ $(function() {
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
-  username = getCookie("username");
+  username = decodeURIComponent(getCookie("username"));
   $usernameLabel.text(username); 
 
   let connected = false;
