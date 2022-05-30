@@ -5,24 +5,31 @@ const roomsDatabase = require("./roomsDatabase")
 const usersInDatabase = require("./usersInDatabase")
 const Messages = require("./messagesDatabase")
 
-
-
-function getRandomInt(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+async function getNewMemberId(){
+    var length = -1
+    await usersInDatabase.find().then((rooms) => {
+        length = rooms.length  
+      })
+    return length
 }
 
 
 async function addMemberToRoom(roomId, username){
-    var id = getRandomInt(1,1000000000)
-    await usersInDatabase.create({
-        "id": id,
-        "roomId":roomId,
-        "username":username,
-        "added":true,
-      })
-      console.log("hiernowwwww22222")
+
+    await getNewMemberId().then(async (id) => {
+        if (roomId >= 0){
+            await usersInDatabase.create({
+                "id": id,
+                "roomId":roomId,
+                "username":username,
+                "added":true,
+              })
+              console.log("hiernowwwww22222")
+        }
+        
+    })
+
+    
 }
 
 async function deleteMemberOfRoom(roomId, username){
@@ -162,20 +169,34 @@ class Room {
     }
 }
 
+async function getNewRoomId(){
+    var length = -1
+    await usersInDatabase.find().then((rooms) => {
+        length = rooms.length  
+      })
+    return length
+}
+
+
 async function createRoom(name, options){
-    console.log('tree')
-    var roomId = getRandomInt(1,10000)
-    const description = options.description
-    const private = options.private;
-    const username = options.username;
-    
-    await roomsDatabase.create({
-        "id": roomId,
-        "name":name,
-        "description":description,
-        "username":username,
-        "private": private,
+    var roomId = -1
+    await getNewRoomId().then(async (roomIdCurr)=> {
+        if (roomIdCurr >= 0){
+            const description = options.description
+            const private = options.private;
+            const username = options.username;
+        
+            await roomsDatabase.create({
+                "id": roomIdCurr,
+                "name":name,
+                "description":description,
+                "username":username,
+                "private": private,
+            })
+            roomId = roomIdCurr
+        }        
     })
+    
     return roomId
 }
 
@@ -228,6 +249,7 @@ module.exports = {
                 returnRoom = null
             }else {
                 await createRoom(name, options).then((id) => {
+                    console.log("MF ROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM", id)
                     var room = new Room(id, name, options);
                     upperRooms[id] = room;
                     returnRoom = room;

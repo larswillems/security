@@ -36,7 +36,6 @@ function hash(password, salt) {
 async function getSalt(username){
   var salt = null
   try {
-    console.log("fucket")
     const document = await User.find({"username":username}).then((user) => {
       console.log(user)
       salt = user[0].seed
@@ -56,11 +55,9 @@ exports.userAuth = async (req, res, next) => {
     const username_hidden = req.cookies.username_hidden
     var salt = await getSalt(username);
     //salt = Buffer.from(salt, 'utf8'); // string to buffer
-    console.log("string salt", salt)
 
     var hashed_username = hash(username, salt).toString();
 
-    console.log("userauth", username, salt, hashed_username, hashed_username.toString())
     if(username==null){
       return res
         .status(401)
