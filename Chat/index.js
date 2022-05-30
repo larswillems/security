@@ -411,7 +411,6 @@ io.on('connection', (socket) => {
     socket.emit('login', {
       users: Users.getUsers().map(u => ({username: u.name, active: u.active, publicKey: u.publicKey})),
       rooms : rooms,
-      publicChannels: publicChannels
     });
 
     setUserActiveState(socket, username, true);

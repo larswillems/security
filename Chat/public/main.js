@@ -291,12 +291,15 @@ $(function() {
   }
 
   function removeRoom(id) {
+    let updated_rooms = []
+
     for (const r of rooms) {
-      found = true;
-      if (r.id == room.id) {
-        delete rooms[rooms.indexOf(r)];
+      if (r.id != id) {
+        updated_rooms.push(r);
       }
     }
+
+    updateRooms(updated_rooms);
     updateRoomList();
   }
 
@@ -387,7 +390,6 @@ $(function() {
   window.setRoom = setRoom;
 
   function setDirectRoomHeader(user) {
-    console.log(user)
     $('#channel-name').text(`@ ${DOMPurify.sanitize(user)}`);
     $('#channel-description').text(`E2E-encrypted direct message with ${DOMPurify.sanitize(user)}` + " 🔒");
   }
@@ -803,8 +805,11 @@ $(function() {
 
   socket.on('remove_room', data => {
     removeRoom(data.room);
+
     if (currentRoom.id == data.room)
       setRoom(0);
+    
+    
   });
 
   ////////////////
