@@ -17,87 +17,93 @@
     <div class="error"></div>
     <div class="sidebar"></div>
     <div class="content">
-    <h1>Login</h1>
-    <form>
-      <br />
-      <label for="username">Username</label><br />
-      <input type="text" id="username" required /><br />
-      <label for="password">Password</label><br />
-      <input type="password" id="password" required /><br />
-      <input type="submit" value="login" /><br />
+      <h1>Login</h1>
+      <form>
+        <br />
+        <label for="username">Username</label><br />
+        <input type="text" id="username" required /><br />
+        <label for="password">Password</label><br />
+        <input type="password" id="password" required /><br />
+        <input type="submit" value="login" /><br />
 
-      <!-- hidden double-sumbit CSRF token field -->
-      <input type="hidden" name="CSRFToken" id="CSRFToken">
+        <!-- hidden double-sumbit CSRF token field -->
+        <input type="hidden" name="CSRFToken" id="CSRFToken">
 
-    </form>
-    <br></br>
-    <a href="/register">Don't have an account? Register here</a>
+      </form>
+      <br></br>
+      <a href="/register">Don't have an account? Register here</a>
 
-    <script 
-      crossorigin="anonymous"
-      integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc"
-      type="text/javascript" 
-      src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js">
-    </script>
+      <script 
+        crossorigin="anonymous"
+        integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc"
+        type="text/javascript" 
+        src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js">
+      </script>
+      <script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js" 
+        integrity="sha512-M72KfQy4kPuLYC6CeTrN0eA17U1lXEMrr5qEJC/40CLdZGC3HpwPS0esQLqBHnxty2FIcuNdP9EqwSOCLEVJXQ==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer">
+      </script>
 
-    <script>
-        const form = document.querySelector('form')
-        const username = document.querySelector('#username')
-        const password = document.querySelector('#password')
-        const display = document.querySelector('.error')
+      <script>
+          const form = document.querySelector('form')
+          const username = document.querySelector('#username')
+          const password = document.querySelector('#password')
+          const display = document.querySelector('.error')
 
-        // CSRF setup
-        function rnd_32byte_string(){
-          return CryptoJS.enc.Utf8.parse(CryptoJS.lib.WordArray.random(32)).toString(CryptoJS.enc.Utf8)
-        }
-        function generateCSRFToken() {
-          let csrf = rnd_32byte_string()
-          let max_age = 5*60 // 5 minutes
+          // CSRF setup
+          function rnd_32byte_string(){
+            return CryptoJS.enc.Utf8.parse(CryptoJS.lib.WordArray.random(32)).toString(CryptoJS.enc.Utf8)
+          }
+          function generateCSRFToken() {
+            let csrf = rnd_32byte_string()
+            let max_age = 5*60 // 5 minutes
 
-          // set cookie with csrf token
-          document.cookie = "csrf=" + csrf + "; max-age=" + max_age + "; path=/; SameSite=Strict; Secure";
-          // set value hidden form field to csrf
-          document.getElementById("CSRFToken").value = csrf
-          return csrf
-        }
-
-        // Submit login request
-        form.addEventListener('submit', async (e) => {
-
-          // check input lengths
-          if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8 || password.value.length > 30) {
-            alert("Invalid input. Username should be between 1 and 30 (alphanumeric) characters long. Password should be at least 8 (alphanumeric) characters long.")
+            // set cookie with csrf token
+            document.cookie = "csrf=" + csrf + "; max-age=" + max_age + "; path=/; SameSite=Strict; Secure";
+            // set value hidden form field to csrf
+            document.getElementById("CSRFToken").value = csrf
+            return csrf
           }
 
-          // perform request
-          else {
-            e.preventDefault()
-            display.textContent = ''
+          // Submit login request
+          form.addEventListener('submit', async (e) => {
 
-            try {
-              generateCSRFToken();
-              const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                // sanitize against XSS attacks by replacing HTML tags
-                body: JSON.stringify({username: username.value, 
-                                      password: password.value, 
-                                      csrf: document.getElementById("CSRFToken").value
-                                    }),
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin'
-                })
-
-              const data = await res.json()
-              if (res.status === 400 || res.status === 401) {
-                return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
-              }
-              location.assign('/main')
-            } catch (err) {
-                console.log(err.message)
+            // check input lengths
+            if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8 || password.value.length > 30) {
+              alert("Invalid input. Username should be between 1 and 30 (alphanumeric) characters long. Password should be at least 8 (alphanumeric) characters long.")
             }
-          }
-        })
-        </script>
+
+            // perform request
+            else {
+              e.preventDefault()
+              display.textContent = ''
+
+              try {
+                generateCSRFToken();
+                const res = await fetch('/api/auth/login', {
+                  method: 'POST',
+                  // sanitize against XSS attacks by replacing HTML tags
+                  body: JSON.stringify({username: DOMPurify.sanitize(username.value), 
+                                        password: password.value, 
+                                        csrf: document.getElementById("CSRFToken").value
+                                      }),
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin'
+                  })
+
+                const data = await res.json()
+                if (res.status === 400 || res.status === 401) {
+                  return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
+                }
+                location.assign('/main')
+              } catch (err) {
+                  console.log(err.message)
+              }
+            }
+          })
+          </script>
     </div>
   </body>
 </html>

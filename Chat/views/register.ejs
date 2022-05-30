@@ -39,6 +39,12 @@
       type="text/javascript" 
       src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js">
     </script>
+    <script 
+      src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js" 
+      integrity="sha512-M72KfQy4kPuLYC6CeTrN0eA17U1lXEMrr5qEJC/40CLdZGC3HpwPS0esQLqBHnxty2FIcuNdP9EqwSOCLEVJXQ==" 
+      crossorigin="anonymous" 
+      referrerpolicy="no-referrer">
+    </script>
 
     <script src="/rsa-clientdb.js"></script>
     <script>
@@ -72,7 +78,7 @@
           const res = await fetch('/api/auth/register', {
             method: 'POST',
             // sanitize against XSS attacks by replacing HTML tags
-            body: JSON.stringify({ username: username.value, 
+            body: JSON.stringify({username: DOMPurify.sanitize(username.value), 
                                   password: password.value,
                                   publicKey: publicKey, 
                                   csrf: document.getElementById("CSRFToken").value

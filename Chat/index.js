@@ -1,4 +1,4 @@
-// Setup basic express server
+// non-local imports
 const fs = require('fs');
 const hostname = 'localhost';
 const express = require('express');
@@ -14,9 +14,10 @@ const server  = require('https').createServer(credentials, app);
 const io      = require('socket.io')(server);
 const port    = process.env.PORT || 8443;
 
+
+// local imports
 const Users   = require('./users.js');
 const Rooms   = require('./rooms.js');
-
 const {userAuth} = require("./middleware/auth.js");
 
 app.get("/", (req, res) => res.render("home"))
