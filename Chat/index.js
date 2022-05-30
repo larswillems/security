@@ -160,8 +160,7 @@ async function newDirectRoom(user_a, user_b) {
 
 async function getDirectRoom(user_a, user_b) {
   var newDirectRoomVar = null
-  await Rooms.getRooms(username).then(async (rooms) => {
-    console.log("maybe here", rooms)
+  await Rooms.getRooms(user_a.name).then(async (rooms) => {
     rooms.filter(r => r.direct 
       && (
         (r.members[0] == user_a.name && r.members[1] == user_b.name) ||
