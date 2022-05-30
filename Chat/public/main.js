@@ -14,7 +14,7 @@ $(function() {
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
-  username = getCookie("username");
+  username = decodeURIComponent(getCookie("username"));
   $usernameLabel.text(username); 
 
   let connected = false;
@@ -23,6 +23,18 @@ $(function() {
 
   $('#addChannelModal').on('hidden.bs.modal', () => modalShowing = false)
                         .on('show.bs.modal',   () => modalShowing = true);
+
+  
+  ///////////////////////////
+  // XSS attack prevention //
+  ///////////////////////////
+
+  /* All data displayed to user is sanitized 
+   * by encoding < and > to their HTML equivalent using:
+   *
+   * TO_SANITIZE.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+   * 
+   */
 
 
 
@@ -238,11 +250,22 @@ $(function() {
     for (let [un, user] of Object.entries(users)) {
       if (username !== user.username) {
         $userList.append(`
-          <li onclick="setDirectRoom(this)" data-direct="${user.username}" class="${user.active ? "online" : "offline"}">${user.username}</li>
+          <li 
+          onclick="setDirectRoom(this)" 
+          data-direct="${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}" 
+          class="${user.active ? "online" : "offline"}">
+            ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+          </li>
         `);
         // append it also to the add user list
         $uta.append(`
-          <button type="button" class="list-group-item list-group-item-action" data-dismiss="modal" onclick="addToChannel('${user.username}')">${user.username}</button>
+          <button 
+            type="button" 
+            class="list-group-item list-group-item-action" 
+            data-dismiss="modal" 
+            onclick="addToChannel('${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}')">
+              ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            </button>
         `); 
       }
     };
@@ -259,35 +282,73 @@ $(function() {
   }
 
   function updateRoom(room) {
-    rooms[room.id] = room;
+    var found = false;
+    for (const r of rooms) {
+      if (r != null){
+        if (r.id == room.id) {
+          found = true;
+          rooms[rooms.indexOf(r)] = room;
+        }
+      }
+      
+    }
+    if (!found)
+      rooms.push(room)
+
     updateRoomList();
   }
 
   function removeRoom(id) {
-    delete rooms[id];
+    for (const r of rooms) {
+      found = true;
+      if (r.id == room.id) {
+        delete rooms[rooms.indexOf(r)];
+      }
+    }
     updateRoomList();
   }
 
   function updateRoomList() {
     $roomList.empty();
+    console.log("tyyyyyyyyyyyyyyyyyyyyyy", rooms)
     rooms.forEach(r => {
-      if (!r.direct)
-        $roomList.append(`
-          <li onclick="setRoom(${r.id})"  data-room="${r.id}" class="${r.private ? "private" : "public"}">${r.name}</li>
-        `);
+      if (r != null){
+        if (!r.direct) {
+          if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
+          $roomList.append(`
+            <li 
+              onclick="setRoom(${r.id})"  
+              data-room="${r.id}" 
+              class="${r.private ? "private" : "public"}">
+                ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
+              </li>
+          `);
+        }
+      }
     });
   }
 
 
   function updateChannels(channels) {
     const c = $("#channelJoins");
+    let e2e;
 
     c.empty();
     channels.forEach(r => {
-      if (!rooms[r.id]) 
-        c.append(`
-          <button type="button" class="list-group-item list-group-item-action" data-dismiss="modal" onclick="joinChannel(${r.id})">${r.name}</button>
-        `); 
+      if (r != null){
+        if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
+          if (!rooms[r.id]) 
+            c.append(`
+              <button 
+                type="button" 
+                class="list-group-item list-group-item-action" 
+                data-dismiss="modal" 
+                onclick="joinChannel(${r.id})">
+                  ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
+                </button>
+            `); 
+      }
+      
     });
   }
 
@@ -301,11 +362,20 @@ $(function() {
   function setRoom(id) {
     let oldRoom = currentRoom;
 
-    const room = rooms[id];
+    var room = null
+    for (const r of rooms) {
+      if (r != null){
+        if (r.id == id) {
+          room = r
+        }
+      }
+      
+    }
     currentRoom = room;
 
     $messages.empty();
-    room.history.forEach(m => addChatMessage(m.msg));
+    console.log(room.history)
+    room.history.forEach(m => {console.log("where the fuuuuuuuuuuuuuuuuuuuuuck",m);addChatMessage(m.msg)});
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -321,10 +391,12 @@ $(function() {
         .attr('data-room', room.id);
 
     } else {
-      let sign = "# ";
-      if (room.private) sign = "$ ";
-      $('#channel-name').text(sign + room.name);
-      $('#channel-description').text(`👤 ${room.members.length} | ${room.description}`);
+      let privacy = "# ";
+      let e2e = "";
+      if (room.private) privacy = "$ ";
+      if (room.encrypted) e2e = " 🔒";
+      $('#channel-name').text(privacy + room.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e);
+      $('#channel-description').text(`👤 ${room.members.length} | ${room.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
       $roomList.find(`li[data-room=${room.id}]`).addClass("active").removeClass("unread");
     }
 
@@ -333,8 +405,8 @@ $(function() {
   window.setRoom = setRoom;
 
   function setDirectRoomHeader(user) {
-    $('#channel-name').text(user);
-    $('#channel-description').text(`Direct message with ${user}`);
+    $('#channel-name').text("@ " + user.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+    $('#channel-description').text(`E2E-encrypted direct message with ${user.replace(/</g, "&lt;").replace(/>/g, "&gt;")}` + " 🔒");
   }
 
   function setToDirectRoom(user) {
@@ -354,33 +426,57 @@ $(function() {
   }
 
   async function sendMessage() {
-    // retrieve input and sanitize against XSS attacks
-    let input = $inputMessage.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // retrieve input
+    let read_input = $inputMessage
 
-    // encrypt sanitized input:
-    let encryption = aesEncrypt(input, username);
-    let encrypted_message = encryption.encrypted_message;
-    let encrypted_username = encryption.encrypted_username;
-    let aes_Key = encryption.key;
-
-    // encrypt key for each recipient
-    var keyArray = [];
-
-    for (const user of users) {
-      var to_encrypt = new TextEncoder().encode(aes_Key);
-          await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
-            await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
-              keyArray.push({username: user.username, encryptedKey: encryptedKey});
-            })
-          }) 
+    // limit message size
+    if (read_input.val().length > 10000) {
+      alert("Message too long.")
+    // encrypt and send message
     }
+    else if (read_input.val().length == 0) {
+      // user pressed enter but there is no message => do nothing and return
+      return
+    }
+    else {
+      // array of public keys
+      var keyArray = [];
 
-    if (encryption && connected && currentRoom !== false) {
-      $inputMessage.val('');
-      const msg = {username: encrypted_username, message: encrypted_message, room: currentRoom.id};
-      
-      //addChatMessage(msg);
-      socket.emit('new message', {msg: msg, keyArray: keyArray});
+      // sanitize input against XSS attacks
+      let input = read_input.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      // define default message and username
+      let m = input;
+      let u = username;
+
+      if (currentRoom.encrypted) {
+        // encrypt sanitized input
+        let encryption = aesEncrypt(input, username);
+        let encrypted_message = encryption.encrypted_message;
+        let encrypted_username = encryption.encrypted_username;
+        let aes_Key = encryption.key;
+
+        // encrypt key for each recipient
+        for (const user of users) {
+          var to_encrypt = new TextEncoder().encode(aes_Key);
+              await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
+                await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
+                  keyArray.push({username: user.username, encryptedKey: encryptedKey});
+                })
+              }) 
+        }
+
+        // replace m and u
+        m = encrypted_message;
+        u = encrypted_username;
+      }
+
+      if (m && connected && currentRoom !== false) {
+        $inputMessage.val('');
+        const msg = {username: u, message: m, room: currentRoom.id};
+        
+        socket.emit('new message', {msg: msg, keyArray: keyArray});
+      }
     }
   }
   
@@ -426,21 +522,23 @@ $(function() {
   }
 
   function addChatMessage(msg) {
-    if (msg.authentication == null) return
+    if (msg.authentication == null) {
+      return
+    }
 
     // display time and message
-    let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: false, 
-                                                        hour  : "numeric", 
-                                                        minute: "numeric"});
+    let time = new Date(msg.time).toLocaleTimeString('en-US', { hour12: true, 
+                                                                hour  : "numeric", 
+                                                                minute: "numeric"});
 
     $messages.append(`
       <div class="message">
         <div class="message-avatar"></div>
         <div class="message-textual">
-          <span class="message-user">${msg.username}</span>
-          <span class="message-authentication" title="Authentication Status">${msg.authentication}</span>
+          <span class="message-user">${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+          <span class="message-authentication" title="Authentication Status">${msg.authentication.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
           <span class="message-time">${"(" + time + ")"}</span>
-          <span class="message-content">${msg.message}</span>
+          <span class="message-content">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
         </div>
       </div>
     `);
@@ -450,19 +548,21 @@ $(function() {
 
   function messageNotify(msg) {
     if (msg.direct)
-      $userList.find(`li[data-direct="${msg.username}"]`).addClass('unread');
+      $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
     else
       $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
   }
 
 
   function addChannel() {
+    console.log("pls lordssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss")
     // retrieve inputs and sanitize against XSS attacks
     const name = $("#inp-channel-name").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const description = $("#inp-channel-description").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const private = $('#inp-private').is(':checked');
+    const encrypted = $('#inp-e2e').is(':checked');
 
-    socket.emit('add_channel', {name: name, description: description, private: private});
+    socket.emit('add_channel', {name: name, description: description, private: private, encrypted: encrypted});
   }
   window.addChannel = addChannel;
 
@@ -473,12 +573,60 @@ $(function() {
   window.joinChannel = joinChannel;
 
 
-socket.on('update_room', data => {
-  updateRoom(data.room);
-  updateRoomList();
-  if (data.moveto)
-    setRoom(data.room.id);
-});
+  socket.on('update_room', data => {
+    // if room has no message history or is not encrypted, update rooms immediately
+    if (!data.room.encrypted || data.room.history.length == 0) {
+      updateRoom(data.room);
+      updateRoomList();
+
+      if (data.moveto)
+        setRoom(data.room.id);
+
+    // else, dencrypt first
+    } else {
+      // retrieve public key messages
+      callOnStore(async function (store) {
+        var getKeys = store.get(username);
+        getKeys.onsuccess = async function() {
+          let rsaKeys = getKeys.result.keys;
+
+          // initialize empty rooms and users
+          var clone = structuredClone(data);
+          clone.room.history = [];
+
+          updateRoom(clone.room);
+          updateRoomList();
+
+          // retrieve every message
+          for (const message of data.room.history) {
+            for (const keyEntry of message.keyArray) {
+              // fill room with messages if they can be decrypted
+              if (data.room.encrypted && keyEntry.username == username) {
+                let encryptedAESkey = keyEntry.encryptedKey
+
+                // decrypt every message
+                await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                  let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                  message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+
+                  // add message to room
+                  clone.room.history.push(message)
+
+                }).then(() => {
+                  updateRoom(clone.room)
+                  updateRoomList();
+
+                  if (data.moveto)
+                    setRoom(data.room.id);
+                })
+              }
+            }
+          }
+        }
+      })
+    }
+      
+  });
 
   function addToChannel(user) {
     socket.emit('add_user_to_channel', {channel: currentRoom.id, user: user});   
@@ -522,14 +670,20 @@ socket.on('update_room', data => {
 
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
+    console.log("juuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
+
+    console.log(data)
+
     connected = true;
     updateUsers(data.users)
     updateRooms(data.rooms)
     updateRoomList();
 
+    /*
     if (data.rooms.length > 0) {
       setRoom(data.rooms[0].id);
     }
+    */
 
     // retrieve public key messages
     callOnStore(async function (store) {
@@ -537,44 +691,51 @@ socket.on('update_room', data => {
       getKeys.onsuccess = async function() {
         let rsaKeys = getKeys.result.keys;
 
-        // initialize empty rooms and users
+        // initialize empty encrypted rooms, and users
         var clone = structuredClone(data);
         for (const r of clone.rooms) {
-          r.history = [];
+          if (r != null){
+            if (r.encrypted) {
+              r.history = [];
+            }
+          }          
         }
         updateRooms(clone.rooms)
         updateUsers(data.users)
+        /*
         if (data.rooms.length > 0) {
           setRoom(data.rooms[0].id);
         }
+        */
 
-        // retrieve every message
+        // retrieve every room
         for (const room of data.rooms) {
-          for (const message of room.history) {
-            for (const keyEntry of message.keyArray) {
+          if (room != null){
+            for (const message of room.history) {
+              for (const keyEntry of message.keyArray) {
+                // fill room with messages if they can be decrypted
+                if (keyEntry.username == username) {
+                  let encryptedAESkey = keyEntry.encryptedKey
 
-              // fill room with messages if they can be decrypted
-              if (keyEntry.username == username) {
-                let encryptedAESkey = keyEntry.encryptedKey
+                  // decrypt every message
+                  await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                    let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                    message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
 
-                // decrypt every message
-                await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-                  let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-                  message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+                    // update rooms and users
+                    var index = data.rooms.indexOf(room)
+                    clone.rooms[index].history.push(message)
 
-                  // update rooms and users
-                  var index = data.rooms.indexOf(room)
-                  clone.rooms[index].history.push(message)
+                    updateRooms(clone.rooms);
 
-                  updateRooms(clone.rooms);
-
-                }).then(() => {
-                  updateUsers(data.users)
-                  updateRoomList();
-                  if (clone.rooms.length > 0) {
-                    setRoom(clone.rooms[0].id);
-                  }
-                })
+                  }).then(() => {
+                    updateUsers(data.users)
+                    updateRoomList();
+                    if (data.rooms.length > 0) {
+                      setRoom(data.rooms[0].id);
+                    }
+                  })
+                }
               }
             }
           }
@@ -589,39 +750,73 @@ socket.on('update_room', data => {
 
   // Whenever the server emits 'new message', update the chat body
   socket.on('new message', (data) => {
+    const roomId = data.room
+    var room
 
-    // retrieve public key messages
-    callOnStore(async function (store) {
-      var getKeys = store.get(username);
-      getKeys.onsuccess = async function() {
-        let rsaKeys = getKeys.result.keys;
+    // if the room is not e2e-encrypted, add message immediately
+    if (!data.encrypted) {
+      // authentication is n/a
+      let msg = data
+      msg.authentication = "";
 
-        // retrieve every message
-        for (const keyEntry of data.keys) {
-          if (keyEntry.username == username) {
-            let encryptedAESkey = keyEntry.encryptedKey
-
-            // decrypt message
-            await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-              let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-              msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
-
-              // add message
-              const roomId = msg.room;
-              const room = rooms[roomId];
-              if (room) {
-                room.history.push({msg: msg, keyArray: data.keys});
-              }
-              if (roomId == currentRoom.id) {
-                addChatMessage(msg)
-              } else { 
-                messageNotify(msg)
-              }
-            })
+      // find room in rooms
+      for (const r of rooms) {
+        if (r !== null){
+          if (r.id == roomId) {
+            room = r;
           }
+
         }
       }
-    })
+      // add message
+      if (room) {
+        room.history.push({msg: msg, keyArray:[]});
+      }
+      if (roomId == currentRoom.id) {
+        addChatMessage(msg);
+      }
+      else {messageNotify(msg);}
+    }
+
+    // else, decrypt message
+    else {
+      // retrieve public key messages
+      callOnStore(async function (store) {
+        var getKeys = store.get(username);
+        getKeys.onsuccess = async function() {
+          let rsaKeys = getKeys.result.keys;
+
+          // retrieve every message
+          for (const keyEntry of data.keys) {
+            if (keyEntry.username == username) {
+              let encryptedAESkey = keyEntry.encryptedKey
+
+              // decrypt message
+              await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
+
+                // find room in rooms
+                for (const r of rooms) {
+                  if (r.id == roomId) {
+                    room = r;
+                  }
+                }
+
+                // add message
+                if (room) {
+                  room.history.push({msg: msg, keyArray: data.keys});
+                }
+                if (roomId == currentRoom.id) {
+                  addChatMessage(msg)
+                } 
+                else {messageNotify(msg)}
+              })
+            }
+          }
+        }
+      })
+    }
 
   });
 
@@ -636,13 +831,8 @@ socket.on('update_room', data => {
   });
 
   socket.on('user_state_change', (data) => {
+    console.log("hier")
     updateUser(data.user);
-  });
-
-  socket.on('update_room', data => {
-    updateRoom(data.room);
-    if (data.moveto)
-      setRoom(data.room.id);
   });
 
   socket.on('remove_room', data => {
@@ -683,4 +873,3 @@ socket.on('update_room', data => {
   });
 
 });
-

@@ -44,9 +44,9 @@
               return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
             }
             location.assign('/main')
-          } catch (err) {
-              console.log(err.message)
-          }
+          } catch(e) {
+        console.log(e.stack);
+    }
         })
         </script>
     </div>

@@ -1,29 +1,31 @@
 // user.js
 const Mongoose = require("mongoose")
 const UserSchema = new Mongoose.Schema({
+  roomId: {
+    type: Number,
+    required: true,
+  },
   username: {
     type: String,
-    //unique: true,
     required: true,
   },
-  password: {
-    type: String,
-    minlength: 8,
-    required: true,
-  },
-  publicKey: {
+  message: {
     type: String,
     required: true,
   },
-  publicKey: {
-    type: String,
+  time: {
+    type: Number,
     required: true,
   },
-  seed: {
+  authentication: {
     type: String,
+    default:'',
+  },
+  keyArray: {
+    type: Array,
     required: true,
   },
 })
 
-const User = Mongoose.model("user", UserSchema)
-module.exports = User
+const Messages = Mongoose.model("messages", UserSchema)
+module.exports = Messages

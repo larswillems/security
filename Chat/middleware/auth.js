@@ -42,7 +42,7 @@ async function getSalt(username){
       salt = user[0].seed
     })    
   } catch (e){
-    console.log(e)
+    console.log(e.stack)
   }
   finally {
       return salt

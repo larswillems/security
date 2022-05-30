@@ -65,6 +65,7 @@ exports.register = async (req, res, next) => {
         });
       })
     } catch (err) {
+      console.log(err.stack)
       res.status(401).json({
         message: "User not successful created",
         error: err.message,
@@ -78,6 +79,8 @@ async function getSalt(username){
     const document = await User.find({"username":username}).then((user) => {
       salt = user[0].seed
     })    
+  }catch (e){
+    console.log(e.stack)
   }
   finally {
       return salt
@@ -91,6 +94,8 @@ async function getPublicKey(username){
     const document = await User.find({"username":username}).then((user) => {
       publicKey = user[0].publicKey
     })
+  }catch (e){
+    console.log(e.stack)
   }
   finally {
     return publicKey
@@ -145,6 +150,7 @@ exports.login = async (req, res, next) => {
           });
       }
     } catch (error) {
+      console.log(e.stack)
       res.status(400).json({
         message: "An error occurred",
         error: error.message,
@@ -181,6 +187,7 @@ exports.chats = async (req, res, next) => {
         });
     }
   } catch (error) {
+    console.log(error.stack)
     res.status(400).json({
       message: "An error occurred",
       error: error.message,
