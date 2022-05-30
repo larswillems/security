@@ -251,6 +251,12 @@ $(function() {
     $userList.empty();
     for (let [un, user] of Object.entries(users)) {
       if (username !== user.username) {
+        /* var entry = document.createElement('li');
+        entry.setAttribute("onclick", "setDirectRoom(this)");
+        entry.setAttribute("data-direct", DOMPurify.sanitize(user.username));
+        entry.setAttribute("class", user.active ? "online" : "offline");
+        entry.appendChild(document.createTextNode(DOMPurify.sanitize(user.username))); */
+
         $userList.append(`
           <li 
           onclick="setDirectRoom(this)" 
@@ -268,7 +274,7 @@ $(function() {
             data-dismiss="modal" 
             onclick="addToChannel('${DOMPurify.sanitize(user.username)}')">
               ${DOMPurify.sanitize(user.username)}
-            </button>
+          </button>
         `); 
       }
     };
@@ -322,7 +328,7 @@ $(function() {
             data-room="${r.id}" 
             class="${r.private ? "private" : "public"}">
               ${DOMPurify.sanitize(r.name) + e2e}
-            </li>
+          </li>
         `);
       }
     });
@@ -344,7 +350,7 @@ $(function() {
             data-dismiss="modal" 
             onclick="joinChannel(${r.id})">
               ${DOMPurify.sanitize(r.name) + e2e}
-            </button>
+          </button>
         `); 
     });
   }
