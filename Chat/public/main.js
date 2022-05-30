@@ -259,7 +259,7 @@ $(function() {
             ${DOMPurify.sanitize(user.username)}
           </li>
         `);
-        document.getElementById("button1").addEventListener('click', doSomething);
+
         // append it also to the add user list
         $uta.append(`
           <button 
