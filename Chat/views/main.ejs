@@ -40,8 +40,8 @@
       <div class="channel-content">
   
           <div class="channel-header">
-            <a href="#" style="float: Right;margin-left: 1em;" class="roomAction btn btn-outline-primary btn-sm" data-toggle="modal"  data-target="#addUserModal">Add user</a>
-            <a href="#" style="float: Right;" class="roomAction btn btn-outline-danger btn-sm" onclick="leaveChannel();">Leave channel</a>
+            <a href="#" class="roomAction btn btn-outline-primary btn-sm" data-toggle="modal"  data-target="#addUserModal">Add user</a>
+            <a href="#" class="roomAction btn btn-outline-danger btn-sm" onclick="leaveChannel();">Leave channel</a>
     
             <span id="channel-name">...</span>
             <span id="channel-description">...</span>
@@ -194,16 +194,5 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/main.js"></script>
-
-    <script>
-      const logout = document.getElementById('logout');
-      logout.addEventListener("click", (e) => {
-        e.preventDefault()
-        document.cookie = "username=test; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.replace('/');
-      })
-    </script>
-
-
   </body>
 </html>

@@ -1,4 +1,5 @@
 $(function() {
+  var publicKey = null;
   // Initialize variables
   const $window = $(window);
   const $messages      = $('.messages'); // Messages area
@@ -6,7 +7,12 @@ $(function() {
   const $usernameLabel = $('#user-name');
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
-  var publicKey = null;
+  const logout = document.getElementById('logout');
+      logout.addEventListener("click", (e) => {
+        e.preventDefault()
+        document.cookie = "username=test; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.replace('/');
+      });
 
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -808,8 +814,6 @@ $(function() {
 
     if (currentRoom.id == data.room)
       setRoom(0);
-    
-    
   });
 
   ////////////////

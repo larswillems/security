@@ -31,6 +31,10 @@ button:hover {
   opacity: 0.8;
 }
 
+.error {
+  background-color: red;
+}
+
 .sidebar {
   height: 100%;
   width: 210px;

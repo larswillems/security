@@ -251,3 +251,12 @@ CD2553
   display: block;
   font-size: 11pt;
 }
+
+.roomAction.btn.btn-outline-primary.btn-sm {
+  float: Right;
+  margin-left: 1em;
+}
+
+.roomAction.btn.btn-outline-danger.btn-sm {
+  float: Right;
+}
