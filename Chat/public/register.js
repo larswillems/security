@@ -38,11 +38,11 @@ async function performRequest() {
     })
 
     const data = await res.json()
-    if(res.status === 400 || res.status === 401){
-    return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
+    if (res.status === 201){
+        location.assign('/main')
+    } else {
+        return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
     }
-    // and redirect
-    location.assign('/main')
 }
 
 // Submit

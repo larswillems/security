@@ -45,10 +45,13 @@ else {
         })
 
     const data = await res.json()
-    if (res.status === 400 || res.status === 401) {
+    if (res.status === 201){
+        location.assign('/main')
+    } else {
         return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
     }
-    location.assign('/main')
+
+    
     } catch (err) {
         console.log(err.message)
     }

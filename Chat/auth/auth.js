@@ -91,7 +91,9 @@ async function getSalt(username){
   var salt = null
   try {
     const document = await User.find({"username":username}).then((user) => {
-      salt = user[0].seed
+      if (user[0] != null){        
+        salt = user[0].seed
+      }
     })    
   }catch (e){
     console.log(e.stack)
@@ -138,7 +140,13 @@ exports.login = async (req, res, next) => {
       const buff = crypto.randomBytes(16);
 
       var salt = await getSalt(username);
-      var originalSalt = salt
+      if (salt == null){
+        res.status(401).json({
+          message: "Login not successful",
+          error: "User not found",
+        })
+      } else {
+        var originalSalt = salt
       salt = Buffer.from(salt, 'utf8'); // string to buffer
       var hashedPassword = hash(password, salt);
       var publicKey = await getPublicKey(username);
@@ -173,12 +181,14 @@ exports.login = async (req, res, next) => {
             user: user._id,
           });
       }
+      }
+      
 
     } catch (error) {
-      console.log(e.stack)
+      console.log(error.stack)
       res.status(400).json({
         message: "An error occurred",
-        error: error.message,
+        error: "error",
       })
     }
 }
