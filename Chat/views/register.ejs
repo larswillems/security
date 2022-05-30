@@ -109,7 +109,7 @@
             try {
               // check local client DB for keys
               callOnStore(function (store) {
-                let getLocalDBkeys = store.get(username.value);
+                let getLocalDBkeys = store.get(DOMPurify.sanitize(username.value));
                 getLocalDBkeys.onsuccess = async function() {
                   // if the local client DB does not have RSA keys
                   if (getLocalDBkeys.result == null) {
@@ -119,7 +119,7 @@
 
                     // if request succeeds, store keys
                     callOnStore(function (store) {
-                        let putKeys = store.put({id: username.value, keys: keys});
+                        let putKeys = store.put({id: DOMPurify.sanitize(username.value), keys: keys});
                     });
 
                     // perform request to server
