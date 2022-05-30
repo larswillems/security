@@ -21,12 +21,8 @@ const {userAuth}      = require("./middleware/auth.js");
 
 // set express headers and enable Content-Secure-Policy (CSP)
 app.use((req, res, next) => {
-  res.append('Access-Control-Allow-Origin', ['*']);
-  res.append('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE")
-  res.append('Access-Control-Allow-Headers', "Content-Type")
-  res.append('Content-Security-Policy', "default-src"
-                                      + " 'self' "
-                                      + " 'unsafe-inline' "
+  res.append('X-Content-Type-Options', "nosniff");
+  res.append('Content-Security-Policy', " default-src 'self' 'unsafe-inline' "
                                       + " https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css "
                                       + " https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js "
                                       + " https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/cipher-core.min.js "
@@ -35,12 +31,11 @@ app.use((req, res, next) => {
                                       + " https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.5/umd/popper.min.js "
                                       + " https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js "
                                       + " https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js "
-                                      )
+                                      );
   next();
 });
-
-// set X-Frame-Options header using helmet (anti-Clickjacking)
-app.use(helmet.frameguard())
+app.use(helmet.frameguard());
+app.disable('x-powered-by');
 
 // express routes
 app.get("/", (req, res) => res.render("home"))
