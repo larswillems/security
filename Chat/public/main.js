@@ -24,6 +24,18 @@ $(function() {
   $('#addChannelModal').on('hidden.bs.modal', () => modalShowing = false)
                         .on('show.bs.modal',   () => modalShowing = true);
 
+  
+  ///////////////////////////
+  // XSS attack prevention //
+  ///////////////////////////
+
+  /* All data displayed to user is sanitized 
+   * by encoding < and > to their HTML equivalent using:
+   *
+   * TO_SANITIZE.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+   * 
+   */
+
 
 
   //////////////////////

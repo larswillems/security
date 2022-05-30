@@ -28,10 +28,23 @@ const cyrb53 = function(str, seed = 0) {
 
 // auth.js
 exports.register = async (req, res, next) => {
-    const { username, password, publicKey } = req.body
+    const { username, password, publicKey, csrf } = req.body
+
+    // check CSRF
+    if (req.cookies.csrf != csrf) {
+      console.log("Invalid CSRF token")
+      return res.status(401).json({
+        message: "Registration not successful",
+        error: "CSRF token invalid",
+      })
+    }
+
+    // check input lengths
     if (password.length < 8 || password.length > 30 || username.length < 1 || username.length > 30) {
       return res.status(400).json({ message: "Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long." })
     }
+
+    // process request
     try {
       var salt = generateSalt(); 
       var hashedPassword = hash(password, salt).toString();
@@ -101,14 +114,23 @@ async function getPublicKey(username){
 
 exports.login = async (req, res, next) => {
     try {
-      const { username, password } = req.body
+      const { username, password, csrf } = req.body
 
+      // check CSRF
+      if (req.cookies.csrf != csrf) {
+        console.log("Invalid CSRF token")
+        return res.status(401).json({
+          message: "Login not successful",
+          error: "CSRF token invalid",
+        })
+      }
+
+      // process request
       var toType = function(obj) {
         return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
       }
 
       const buff = crypto.randomBytes(16);
-
 
       var salt = await getSalt(username);
       var originalSalt = salt
@@ -116,8 +138,8 @@ exports.login = async (req, res, next) => {
       var hashedPassword = hash(password, salt);
       var publicKey = await getPublicKey(username);
             
-
       const user = await User.findOne({ username, hashedPassword, publicKey, originalSalt })
+
       if (!user) {
         res.status(401).json({
           message: "Login not successful",
@@ -146,6 +168,7 @@ exports.login = async (req, res, next) => {
             user: user._id,
           });
       }
+
     } catch (error) {
       res.status(400).json({
         message: "An error occurred",
@@ -153,6 +176,7 @@ exports.login = async (req, res, next) => {
       })
     }
 }
+
 // auth.js
 exports.chats = async (req, res, next) => {
   try {

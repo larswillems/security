@@ -25,9 +25,20 @@
       <label for="password">Password</label><br />
       <input type="password" id="password" required /><br />
       <input type="submit" value="register" /><br />
+
+      <!-- hidden double-sumbit CSRF token field -->
+      <input type="hidden" name="CSRFToken" id="CSRFToken">
+
     </form>
     <br></br>
     <a href="/login">Already registered? Login here</a>
+
+    <script 
+      crossorigin="anonymous"
+      integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc"
+      type="text/javascript" 
+      src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js">
+    </script>
 
     <script src="/rsa-clientdb.js"></script>
     <script>
@@ -39,17 +50,37 @@
         let keys = null
         let publicKey = null
 
+        // CSRF setup
+        function rnd_32byte_string(){
+          return CryptoJS.enc.Utf8.parse(CryptoJS.lib.WordArray.random(32)).toString(CryptoJS.enc.Utf8)
+        }
+        function generateCSRFToken() {
+          let csrf = rnd_32byte_string()
+          let max_age = 5*60 // 5 minutes
+
+          // set cookie with csrf token
+          document.cookie = "csrf=" + csrf + "; max-age=" + max_age + "; path=/; SameSite=Strict; Secure";
+          // set value hidden form field to csrf
+          document.getElementById("CSRFToken").value = csrf
+          return csrf
+        }
+
+        // POST request
         async function performRequest() {
+          generateCSRFToken();
           // perform request
           const res = await fetch('/api/auth/register', {
             method: 'POST',
             // sanitize against XSS attacks by replacing HTML tags
             body: JSON.stringify({ username: username.value, 
                                   password: password.value,
-                                  publicKey: publicKey
+                                  publicKey: publicKey, 
+                                  csrf: document.getElementById("CSRFToken").value
                                 }),
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
             })
+
             const data = await res.json()
             if(res.status === 400 || res.status === 401){
             return display.textContent = `${data.message}. ${data.error ? data.error : ''}`
@@ -58,7 +89,7 @@
             location.assign('/main')
         }
 
-        // when form is being submitted:
+        // Submit
         form.addEventListener('submit', async (e) => {
           // check input lengths
           if (username.value.length < 1 || username.value.length > 30 || password.value.length < 8 || password.value.length > 30) {
