@@ -1,24 +1,43 @@
-// Setup basic express server
-const fs = require('fs');
-const hostname = 'localhost';
-const express = require('express');
-const cookieParser = require("cookie-parser");
-const app     = express();
-app.use(cookieParser());
-const path    = require('path');
-const credentials = {
+// non-local imports
+const fs              = require('fs');
+const hostname        = 'localhost';
+const express         = require('express');
+const helmet          = require('helmet');
+const cookieParser    = require("cookie-parser");
+const app             = express(); app.use(cookieParser());
+const path            = require('path');
+const credentials     = {
   key: fs.readFileSync('key.pem', 'utf8'),
   cert: fs.readFileSync('cert.pem', 'utf8')
 };
-const server  = require('https').createServer(credentials, app);
-const io      = require('socket.io')(server);
-const port    = process.env.PORT || 8443;
+const server          = require('https').createServer(credentials, app);
+const io              = require('socket.io')(server);
+const port            = process.env.PORT || 8443;
 
-const Users   = require('./users.js');
-const Rooms   = require('./rooms.js');
+// local imports
+const Users           = require('./users.js');
+const Rooms           = require('./rooms.js');
+const {userAuth}      = require("./middleware/auth.js");
 
-const {userAuth} = require("./middleware/auth.js");
+// set express headers and enable Content-Secure-Policy (CSP)
+app.use((req, res, next) => {
+  res.append('X-Content-Type-Options', "nosniff");
+  res.append('Content-Security-Policy', " default-src 'self' 'unsafe-inline' "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/cipher-core.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/aes.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.slim.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.5/umd/popper.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js "
+                                      + " https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js "
+                                      );
+  next();
+});
+app.use(helmet.frameguard());
+app.disable('x-powered-by');
 
+// express routes
 app.get("/", (req, res) => res.render("home"))
 app.get("/register", (req, res) => res.render("register"))
 app.get("/login", (req, res) => res.render("login"))
@@ -225,6 +244,7 @@ function setUserActiveState(socket, username, state) {
 ///////////////////////////////
 
 const connectDB = require("./db");
+const { nextTick } = require('process');
 connectDB();
 
 
@@ -342,7 +362,6 @@ io.on('connection', (socket) => {
       const user = Users.getUser(username);
       const room = await newChannel(req.name, req.description, req.private, req.encrypted, user).then(async (room) => {
         if (room != null){
-          console.log("juuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu", room)
           const roomCID = 'room' + room.getId();
           socket.join(roomCID);
     
@@ -353,7 +372,6 @@ io.on('connection', (socket) => {
     
           if (!room.private) {
             await Rooms.getRooms(username).then((publicChannels) => {
-              console.log("maybe here2", publicChannels)
               publicChannels.filter(r => !r.direct && !r.private);
               socket.broadcast.emit('update_public_channels', {
                 publicChannels: publicChannels
@@ -468,7 +486,6 @@ io.on('connection', (socket) => {
       socket.emit('login', {
         users: Users.getUsers().map(u => ({username: u.name, active: u.active, publicKey: u.publicKey})),
         rooms: rooms,
-        //publicChannels: publicChannels
       });
 
   

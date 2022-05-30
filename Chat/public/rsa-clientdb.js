@@ -86,29 +86,3 @@ function callOnStore(fn_) {
       };
   }
 }
-
-
-
-
-////////////////////
-// TEST FUNCTIONS //
-////////////////////
-
-async function testCrypto() {
-  let data = new TextEncoder().encode("12345678901234567890123456789012");
-  let keys = await generateRSAkeys();
-  let encrypted = await rsaEncrypt(data, keys);
-  let decrypted = await rsaDecrypt(encrypted, keys);
-  console.log(new TextDecoder("utf-8").decode(decrypted));
-}
-//testCrypto()
-
-// If local database does not already contain RSA keys, create and store them.
-async function testDB() {
-  callOnStore(function (store) {
-    var getData = store.get(username);
-    getData.onsuccess = async function() {
-      console.log("GET: ", getData.result)
-    };
-  });
-}

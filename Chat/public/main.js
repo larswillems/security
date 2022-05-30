@@ -1,4 +1,5 @@
 $(function() {
+  var publicKey = null;
   // Initialize variables
   const $window = $(window);
   const $messages      = $('.messages'); // Messages area
@@ -6,7 +7,13 @@ $(function() {
   const $usernameLabel = $('#user-name');
   const $userList      = $('#user-list');
   const $roomList      = $('#room-list');
-  var publicKey = null;
+
+  const logout = document.getElementById('logout');
+      logout.addEventListener("click", (e) => {
+        e.preventDefault()
+        document.cookie = "username=test; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.replace('/');
+      });
 
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -29,12 +36,7 @@ $(function() {
   // XSS attack prevention //
   ///////////////////////////
 
-  /* All data displayed to user is sanitized 
-   * by encoding < and > to their HTML equivalent using:
-   *
-   * TO_SANITIZE.replace(/</g, "&lt;").replace(/>/g, "&gt;")
-   * 
-   */
+  /* Data is sanitized using DOMPurify */
 
 
 
@@ -249,23 +251,30 @@ $(function() {
     $userList.empty();
     for (let [un, user] of Object.entries(users)) {
       if (username !== user.username) {
+        /* var entry = document.createElement('li');
+        entry.setAttribute("onclick", "setDirectRoom(this)");
+        entry.setAttribute("data-direct", DOMPurify.sanitize(user.username));
+        entry.setAttribute("class", user.active ? "online" : "offline");
+        entry.appendChild(document.createTextNode(DOMPurify.sanitize(user.username))); */
+
         $userList.append(`
           <li 
           onclick="setDirectRoom(this)" 
-          data-direct="${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}" 
+          data-direct="${DOMPurify.sanitize(user.username)}" 
           class="${user.active ? "online" : "offline"}">
-            ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+            ${DOMPurify.sanitize(user.username)}
           </li>
         `);
+
         // append it also to the add user list
         $uta.append(`
           <button 
             type="button" 
             class="list-group-item list-group-item-action" 
             data-dismiss="modal" 
-            onclick="addToChannel('${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}')">
-              ${user.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
-            </button>
+            onclick="addToChannel('${DOMPurify.sanitize(user.username)}')">
+              ${DOMPurify.sanitize(user.username)}
+          </button>
         `); 
       }
     };
@@ -299,12 +308,17 @@ $(function() {
   }
 
   function removeRoom(id) {
+    let updated_rooms = []
+
     for (const r of rooms) {
-      found = true;
-      if (r.id == room.id) {
-        delete rooms[rooms.indexOf(r)];
+      if (r != null){
+        if (r.id != id) {
+          updated_rooms.push(r);
+        }
       }
     }
+
+    updateRooms(updated_rooms);
     updateRoomList();
   }
 
@@ -320,8 +334,8 @@ $(function() {
               onclick="setRoom(${r.id})"  
               data-room="${r.id}" 
               class="${r.private ? "private" : "public"}">
-                ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
-              </li>
+                ${DOMPurify.sanitize(r.name) + e2e}
+            </li>
           `);
         }
       }
@@ -335,20 +349,19 @@ $(function() {
 
     c.empty();
     channels.forEach(r => {
-      if (r != null){
+      if (r != null){ 
         if (r.encrypted) {e2e = " 🔒"} else {e2e = ""}
-          if (!rooms[r.id]) 
-            c.append(`
-              <button 
-                type="button" 
-                class="list-group-item list-group-item-action" 
-                data-dismiss="modal" 
-                onclick="joinChannel(${r.id})">
-                  ${r.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e}
-                </button>
-            `); 
+        if (!rooms[r.id]) 
+          c.append(`
+            <button 
+              type="button" 
+              class="list-group-item list-group-item-action" 
+              data-dismiss="modal" 
+              onclick="joinChannel(${r.id})">
+                ${DOMPurify.sanitize(r.name) + e2e}
+            </button>
+          `); 
       }
-      
     });
   }
 
@@ -395,8 +408,8 @@ $(function() {
       let e2e = "";
       if (room.private) privacy = "$ ";
       if (room.encrypted) e2e = " 🔒";
-      $('#channel-name').text(privacy + room.name.replace(/</g, "&lt;").replace(/>/g, "&gt;") + e2e);
-      $('#channel-description').text(`👤 ${room.members.length} | ${room.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
+      $('#channel-name').text(`${privacy} ${DOMPurify.sanitize(room.name)} ${e2e}`);
+      $('#channel-description').text(`👤 ${room.members.length} | ${DOMPurify.sanitize(room.description)}`);
       $roomList.find(`li[data-room=${room.id}]`).addClass("active").removeClass("unread");
     }
 
@@ -405,8 +418,8 @@ $(function() {
   window.setRoom = setRoom;
 
   function setDirectRoomHeader(user) {
-    $('#channel-name').text("@ " + user.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
-    $('#channel-description').text(`E2E-encrypted direct message with ${user.replace(/</g, "&lt;").replace(/>/g, "&gt;")}` + " 🔒");
+    $('#channel-name').text(`@ ${DOMPurify.sanitize(user)}`);
+    $('#channel-description').text(`E2E-encrypted direct message with ${DOMPurify.sanitize(user)}` + " 🔒");
   }
 
   function setToDirectRoom(user) {
@@ -443,7 +456,7 @@ $(function() {
       var keyArray = [];
 
       // sanitize input against XSS attacks
-      let input = read_input.val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      let input = DOMPurify.sanitize(read_input.val());
 
       // define default message and username
       let m = input;
@@ -535,10 +548,10 @@ $(function() {
       <div class="message">
         <div class="message-avatar"></div>
         <div class="message-textual">
-          <span class="message-user">${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
-          <span class="message-authentication" title="Authentication Status">${msg.authentication.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
-          <span class="message-time">${"(" + time + ")"}</span>
-          <span class="message-content">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+          <span class="message-user">${DOMPurify.sanitize(msg.username)}</span>
+          <span class="message-authentication" title="Authentication Status">${DOMPurify.sanitize(msg.authentication)}</span>
+          <span class="message-time">${"(" + DOMPurify.sanitize(time) + ")"}</span>
+          <span class="message-content">${DOMPurify.sanitize(msg.message)}</span>
         </div>
       </div>
     `);
@@ -548,7 +561,7 @@ $(function() {
 
   function messageNotify(msg) {
     if (msg.direct)
-      $userList.find(`li[data-direct="${msg.username.replace(/</g, "&lt;").replace(/>/g, "&gt;")}"]`).addClass('unread');
+      $userList.find(`li[data-direct="${DOMPurify.sanitize(msg.username)}"]`).addClass('unread');
     else
       $roomList.find(`li[data-room=${msg.room}]`).addClass("unread");
   }
@@ -557,8 +570,8 @@ $(function() {
   function addChannel() {
     console.log("pls lordssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss")
     // retrieve inputs and sanitize against XSS attacks
-    const name = $("#inp-channel-name").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const description = $("#inp-channel-description").val().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const name = DOMPurify.sanitize($("#inp-channel-name").val());
+    const description = DOMPurify.sanitize($("#inp-channel-description").val());
     const private = $('#inp-private').is(':checked');
     const encrypted = $('#inp-e2e').is(':checked');
 
@@ -837,6 +850,7 @@ $(function() {
 
   socket.on('remove_room', data => {
     removeRoom(data.room);
+
     if (currentRoom.id == data.room)
       setRoom(0);
   });

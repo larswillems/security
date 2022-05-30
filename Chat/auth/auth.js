@@ -28,10 +28,23 @@ const cyrb53 = function(str, seed = 0) {
 
 // auth.js
 exports.register = async (req, res, next) => {
-    const { username, password, publicKey } = req.body
-    if (password.length <= 8 || password.length >= 30) {
-      return res.status(400).json({ message: "Password must be between 8 and 30 characters long" })
+    const { username, password, publicKey, csrf } = req.body
+
+    // check CSRF
+    if (req.cookies.csrf != csrf) {
+      console.log("Invalid CSRF token")
+      return res.status(401).json({
+        message: "Registration not successful",
+        error: "CSRF token invalid",
+      })
     }
+
+    // check input lengths
+    if (password.length < 8 || password.length > 30 || username.length < 1 || username.length > 30) {
+      return res.status(400).json({ message: "Invalid input. Username should be between 1 and 30 characters long. Password should be at least 8 characters long." })
+    }
+
+    // process request
     try {
       var salt = generateSalt(); 
       var hashedPassword = hash(password, salt).toString();
@@ -52,11 +65,12 @@ exports.register = async (req, res, next) => {
         );
         var hashed_username = hash(username, salt.toString())
 
-        res.cookie("username", username.toString(), {httpOnly:false, secure:true, maxAge: maxAge * 1000});
-        res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, secure:true, maxAge: maxAge * 1000});
+        res.cookie("username", username.toString(), {httpOnly:false, sameSite: true, secure: true, maxAge: maxAge * 1000});
+        res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, sameSite: true, secure: true, maxAge: maxAge * 1000});
         res.cookie("jwt", token, {
           httpOnly: true, 
-          secure:true,
+          secure: true,
+          sameSite: true,
           maxAge: maxAge * 1000, // 3hrs in ms
         });
         res.status(201).json({
@@ -105,14 +119,23 @@ async function getPublicKey(username){
 
 exports.login = async (req, res, next) => {
     try {
-      const { username, password } = req.body
+      const { username, password, csrf } = req.body
 
+      // check CSRF
+      if (req.cookies.csrf != csrf) {
+        console.log("Invalid CSRF token")
+        return res.status(401).json({
+          message: "Login not successful",
+          error: "CSRF token invalid",
+        })
+      }
+
+      // process request
       var toType = function(obj) {
         return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
       }
 
       const buff = crypto.randomBytes(16);
-
 
       var salt = await getSalt(username);
       var originalSalt = salt
@@ -120,8 +143,8 @@ exports.login = async (req, res, next) => {
       var hashedPassword = hash(password, salt);
       var publicKey = await getPublicKey(username);
             
-
       const user = await User.findOne({ username, hashedPassword, publicKey, originalSalt })
+
       if (!user) {
         res.status(401).json({
           message: "Login not successful",
@@ -137,11 +160,12 @@ exports.login = async (req, res, next) => {
             }
           );
           var hashed_username = hash(username, salt.toString())
-          res.cookie("username", username.toString(), {httpOnly:false, secure:true, maxAge: maxAge * 1000});
-          res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, secure:true, maxAge: maxAge * 1000});
+          res.cookie("username", username.toString(), {httpOnly:false, sameSite: true, secure: true, maxAge: maxAge * 1000});
+          res.cookie("username_hidden", hashed_username.toString(), {httpOnly:true, sameSite: true, secure: true, maxAge: maxAge * 1000});
           res.cookie("jwt", token, {
             httpOnly: true,
-            secure:true,
+            secure: true,
+            sameSite: true,
             maxAge: maxAge * 1000, // 3 hours in ms
           });
           res.status(201).json({
@@ -149,6 +173,7 @@ exports.login = async (req, res, next) => {
             user: user._id,
           });
       }
+
     } catch (error) {
       console.log(e.stack)
       res.status(400).json({
@@ -157,6 +182,7 @@ exports.login = async (req, res, next) => {
       })
     }
 }
+
 // auth.js
 exports.chats = async (req, res, next) => {
   try {
@@ -178,7 +204,8 @@ exports.chats = async (req, res, next) => {
         );
         res.cookie("jwt", token, {
           httpOnly: true,
-          secure:true,
+          secure: true,
+          sameSite: true,
           maxAge: maxAge * 1000, // 3 hours in ms
         });
         res.status(201).json({
