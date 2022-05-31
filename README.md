@@ -2,10 +2,10 @@
 The purpose of this project is to create a **secure** chat platform similar to Slack, which allows users to communicate messages in channels or as private messages. 
 
 ## Student Info
-| Name         | E-mail              |
-|--------------|---------------------|
-| Bram Silue   | bram.silue@vub.be   |
-| Lars Willems | lars.willems@vub.be |
+| Name         | E-mail                  |
+|--------------|-------------------------|
+| Bram Silue   | bram.silue@vub.be       |
+| Lars Willems | lars.luk.willems@vub.be |
 
 
 ## Table of Contents
