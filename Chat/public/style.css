@@ -260,3 +260,8 @@ CD2553
 .roomAction.btn.btn-outline-danger.btn-sm {
   float: Right;
 }
+
+.channel-note {
+  color: rgb(155, 155, 155);
+  font-size: 8pt;
+}
