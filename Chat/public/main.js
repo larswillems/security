@@ -66,6 +66,17 @@ $(function() {
   // Encryption: RSA //
   /////////////////////
 
+  function buf2hex(buffer) { // buffer is an ArrayBuffer
+    return [...new Uint8Array(buffer)]
+        .map(x => x.toString(16).padStart(2, '0'))
+        .join('');
+  }
+  async function hex2buf(hex) {
+    var bytes = new Uint8Array(Math.ceil(hex.length / 2));
+    for (var i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+    return bytes.buffer
+  }
+  
   // Generate RSA keys
   async function generateRSAkeys() {
     let keys = await window.crypto.subtle.generateKey(
@@ -251,12 +262,7 @@ $(function() {
     $userList.empty();
     for (let [un, user] of Object.entries(users)) {
       if (username !== user.username) {
-        /* var entry = document.createElement('li');
-        entry.setAttribute("onclick", "setDirectRoom(this)");
-        entry.setAttribute("data-direct", DOMPurify.sanitize(user.username));
-        entry.setAttribute("class", user.active ? "online" : "offline");
-        entry.appendChild(document.createTextNode(DOMPurify.sanitize(user.username))); */
-
+        
         $userList.append(`
           <li 
           onclick="setDirectRoom(this)" 
@@ -381,13 +387,11 @@ $(function() {
           room = r
         }
       }
-      
     }
     currentRoom = room;
 
     $messages.empty();
-    console.log(room.history)
-    room.history.forEach(m => {addChatMessage(m.msg)});
+    room.history.forEach(m => addChatMessage(m.msg));
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -471,11 +475,11 @@ $(function() {
         // encrypt key for each recipient
         for (const user of users) {
           var to_encrypt = new TextEncoder().encode(aes_Key);
-              await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
-                await rsaEncrypt(to_encrypt, userPublicKey).then((encryptedKey) => {
-                  keyArray.push({username: user.username, encryptedKey: encryptedKey});
-                })
-              }) 
+          await importCryptoKey(JSON.parse(user.publicKey)).then(async (userPublicKey) => {
+            await rsaEncrypt(to_encrypt, userPublicKey).then(async (encryptedKey) => {
+              keyArray.push({username: user.username, encryptedKey: buf2hex(encryptedKey)});
+            })
+          }) 
         }
 
         // replace m and u
@@ -567,7 +571,6 @@ $(function() {
 
 
   function addChannel() {
-    console.log("pls lordssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss")
     // retrieve inputs and sanitize against XSS attacks
     const name = DOMPurify.sanitize($("#inp-channel-name").val());
     const description = DOMPurify.sanitize($("#inp-channel-description").val());
@@ -614,22 +617,22 @@ $(function() {
             for (const keyEntry of message.keyArray) {
               // fill room with messages if they can be decrypted
               if (data.room.encrypted && keyEntry.username == username) {
-                let encryptedAESkey = keyEntry.encryptedKey
+                await hex2buf(keyEntry.encryptedKey).then( async (encryptedAESkey) => {
+                  // decrypt every message
+                  await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                    let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                    message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
 
-                // decrypt every message
-                await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-                  let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-                  message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+                    // add message to room
+                    clone.room.history.push(message)
 
-                  // add message to room
-                  clone.room.history.push(message)
+                  }).then(() => {
+                    updateRoom(clone.room)
+                    updateRoomList();
 
-                }).then(() => {
-                  updateRoom(clone.room)
-                  updateRoomList();
-
-                  if (data.moveto)
-                    setRoom(data.room.id);
+                    if (data.moveto)
+                      setRoom(data.room.id);
+                  })
                 })
               }
             }
@@ -682,19 +685,23 @@ $(function() {
 
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
-
-    console.log(data)
-
     connected = true;
     updateUsers(data.users)
     updateRooms(data.rooms)
     updateRoomList();
 
-    /*
     if (data.rooms.length > 0) {
       setRoom(data.rooms[0].id);
     }
-    */
+    else {
+      let name = username + "'s default channel"
+      let description = "Interesting stuff 👀"
+      let private = true;
+      let encrypted = true;
+
+      // create default channel
+      socket.emit('add_channel', {name: name, description: description, private: private, encrypted: encrypted});
+    }
 
     // retrieve public key messages
     callOnStore(async function (store) {
@@ -713,11 +720,9 @@ $(function() {
         }
         updateRooms(clone.rooms)
         updateUsers(data.users)
-        /*
         if (data.rooms.length > 0) {
           setRoom(data.rooms[0].id);
         }
-        */
 
         // retrieve every room
         for (const room of data.rooms) {
@@ -726,25 +731,26 @@ $(function() {
               for (const keyEntry of message.keyArray) {
                 // fill room with messages if they can be decrypted
                 if (keyEntry.username == username) {
-                  let encryptedAESkey = keyEntry.encryptedKey
+                  await hex2buf(keyEntry.encryptedKey).then( async (encryptedAESkey) => {
 
-                  // decrypt every message
-                  await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-                    let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-                    message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
+                    // decrypt every message
+                    await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                      let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                      message.msg = decryptProcessedMsg(message.msg, processEncryptedMsg(message.msg, decryptedAESkey), decryptedAESkey)
 
-                    // update rooms and users
-                    var index = data.rooms.indexOf(room)
-                    clone.rooms[index].history.push(message)
+                      // update rooms and users
+                      var index = data.rooms.indexOf(room)
+                      clone.rooms[index].history.push(message)
 
-                    updateRooms(clone.rooms);
+                      updateRooms(clone.rooms);
 
-                  }).then(() => {
-                    updateUsers(data.users)
-                    updateRoomList();
-                    if (data.rooms.length > 0) {
-                      setRoom(data.rooms[0].id);
-                    }
+                    }).then(() => {
+                      updateUsers(data.users)
+                      updateRoomList();
+                      if (data.rooms.length > 0) {
+                        setRoom(data.rooms[0].id);
+                      }
+                    })
                   })
                 }
               }
@@ -776,7 +782,6 @@ $(function() {
           if (r.id == roomId) {
             room = r;
           }
-
         }
       }
       // add message
@@ -800,28 +805,28 @@ $(function() {
           // retrieve every message
           for (const keyEntry of data.keys) {
             if (keyEntry.username == username) {
-              let encryptedAESkey = keyEntry.encryptedKey
+              await hex2buf(keyEntry.encryptedKey).then( async (encryptedAESkey) => {
+                // decrypt message
+                await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
+                  let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
+                  msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
 
-              // decrypt message
-              await rsaDecrypt(encryptedAESkey, rsaKeys).then( async (decryption) => {
-                let decryptedAESkey = new TextDecoder("utf-8").decode(decryption)
-                msg = decryptProcessedMsg(data, processEncryptedMsg(data, decryptedAESkey), decryptedAESkey);
-
-                // find room in rooms
-                for (const r of rooms) {
-                  if (r.id == roomId) {
-                    room = r;
+                  // find room in rooms
+                  for (const r of rooms) {
+                    if (r.id == roomId) {
+                      room = r;
+                    }
                   }
-                }
 
-                // add message
-                if (room) {
-                  room.history.push({msg: msg, keyArray: data.keys});
-                }
-                if (roomId == currentRoom.id) {
-                  addChatMessage(msg)
-                } 
-                else {messageNotify(msg)}
+                  // add message
+                  if (room) {
+                    room.history.push({msg: msg, keyArray: data.keys});
+                  }
+                  if (roomId == currentRoom.id) {
+                    addChatMessage(msg)
+                  } 
+                  else {messageNotify(msg)}
+                })
               })
             }
           }
