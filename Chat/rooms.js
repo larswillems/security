@@ -24,7 +24,6 @@ async function addMemberToRoom(roomId, username){
                 "username":username,
                 "added":true,
               })
-              console.log("hiernowwwww22222")
         }
         
     })
@@ -249,7 +248,6 @@ module.exports = {
                 returnRoom = null
             }else {
                 await createRoom(name, options).then((id) => {
-                    console.log("MF ROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM", id)
                     var room = new Room(id, name, options);
                     upperRooms[id] = room;
                     returnRoom = room;

@@ -324,7 +324,6 @@ $(function() {
 
   function updateRoomList() {
     $roomList.empty();
-    console.log("tyyyyyyyyyyyyyyyyyyyyyy", rooms)
     rooms.forEach(r => {
       if (r != null){
         if (!r.direct) {
@@ -388,7 +387,7 @@ $(function() {
 
     $messages.empty();
     console.log(room.history)
-    room.history.forEach(m => {console.log("where the fuuuuuuuuuuuuuuuuuuuuuck",m);addChatMessage(m.msg)});
+    room.history.forEach(m => {addChatMessage(m.msg)});
 
     $userList.find('li').removeClass("active");
     $roomList.find('li').removeClass("active");
@@ -683,7 +682,6 @@ $(function() {
 
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
-    console.log("juuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
 
     console.log(data)
 
@@ -844,7 +842,6 @@ $(function() {
   });
 
   socket.on('user_state_change', (data) => {
-    console.log("hier")
     updateUser(data.user);
   });
 

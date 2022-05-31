@@ -120,7 +120,7 @@ async function newRoom(name, user, options) {
 
   var returnRoom = []
   const room = await Rooms.addRoom(name, options).then(async (room) => {
-    console.log("hihi", room)
+  
     if (room != null){
       await addUserToRoom(user, room).then(() =>{})
     }
@@ -203,10 +203,6 @@ function removeUserFromRoom(user, room) {
 
 function addMessageToRoom(roomId, data) {
   const room = Rooms.getRoom(roomId);
-
-  console.log("hier")
-  console.log(roomId)
-  console.log(room)
 
   data.msg.time = new Date().getTime();
 
@@ -475,8 +471,6 @@ io.on('connection', (socket) => {
       socket.join('room' + s);
       return Rooms.getRoom(s);
     });
-
-    console.log("rooms", rooms)
 
     await Rooms.getRooms(username).then((rooms) => {
       console.log("maybe here3", rooms)
