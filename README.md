@@ -22,7 +22,9 @@ The main goal of this project is to secure the implementation, by limiting what 
 ## How to run
 First, make sure to [download and install MongoDB](https://www.mongodb.com/docs/guides/server/install/). Then, make sure to [start MongoDB](https://www.mongodb.com/docs/manual/tutorial/manage-mongodb-processes/).
 
-Next, open the `Chat` folder in your terminal and execute the following commands with root privileges:
+Our implementation provides two versions of the chat app. One version provides a smooth user experience but *without* persistent storage of data, which can be found in the folder called `chat-app (no-db)`. The other version *does* provide persistent storage of data using MongoDB, but comes with bugs on the client side that make for some issues with regards to displaying messages in some scenarios.
+
+Choose the version you want to use, then, open the `Chat` folder in your terminal and execute the following commands *with root privileges*:
 
 ```
 $ npm install
