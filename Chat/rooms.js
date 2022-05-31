@@ -184,6 +184,7 @@ async function createRoom(name, options){
             const description = options.description
             const private = options.private;
             const username = options.username;
+            const encrypted = options.encrypted;
         
             await roomsDatabase.create({
                 "id": roomIdCurr,
@@ -191,6 +192,7 @@ async function createRoom(name, options){
                 "description":description,
                 "username":username,
                 "private": private,
+                "encrypted": encrypted
             })
             roomId = roomIdCurr
         }        
@@ -269,10 +271,12 @@ module.exports = {
                 const newName = room.name
                 const newDescription = room.description
                 const newPrivate = room.private
+                const newEncrypted = room.encrypted
                 const newForceMembership = room.forceMembership
                 const newOptions = {
                 description: newDescription,
                 private: newPrivate,
+                encrypted: newEncrypted,
                 forceMembership: newForceMembership,
                 direct: false
                 }

@@ -288,9 +288,6 @@ io.on('connection', (socket) => {
   let userLoggedIn = false;
   let username = false;
 
-
-
-
   
   ///////////////////////////////
   // incoming database functions/

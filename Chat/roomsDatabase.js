@@ -24,6 +24,10 @@ id: {
     type: Boolean,
     required: true,
   },
+  encrypted: {
+    type: Boolean,
+    required: true,
+  },
   forceMembership: {
     type: Boolean,
     required: true,
