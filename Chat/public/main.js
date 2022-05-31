@@ -686,8 +686,6 @@ $(function() {
   // Whenever the server emits -login-, log the login message
   socket.on('login', (data) => {
 
-    console.log(data)
-    
     connected = true;
     updateUsers(data.users)
     updateRooms(data.rooms)
@@ -770,6 +768,10 @@ $(function() {
 
   // Whenever the server emits 'new message', update the chat body
   socket.on('new message', (data) => {
+
+    console.log(data)
+    
+    var getKeys = null
     const roomId = data.room
     var room
 
@@ -801,7 +803,7 @@ $(function() {
     else {
       // retrieve public key messages
       callOnStore(async function (store) {
-        var getKeys = store.get(username);
+        getKeys = store.get(username);
         getKeys.onsuccess = async function() {
           let rsaKeys = getKeys.result.keys;
 

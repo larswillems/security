@@ -244,7 +244,6 @@ module.exports = {
 
     addRoom: async (name, options) => {
         var returnRoom = null
-        console.log("one")
         await checkIfRoomExists(name).then(async (bool) => {
             if (bool){
                 returnRoom = null

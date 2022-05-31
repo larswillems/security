@@ -221,7 +221,6 @@ function addMessageToRoom(roomId, data) {
       data.msg.authentication = "";
     }
     room.addMessage(data);
-    console.log(data)
   }
 }
 
@@ -230,7 +229,6 @@ function setUserActiveState(socket, username, state) {
 
   if (user)
     user.setActiveState(state);
-  console.log("this first")
   socket.broadcast.emit('user_state_change', {user});
 }
 
@@ -306,6 +304,7 @@ io.on('connection', (socket) => {
   ///////////////////////
 
   socket.on('new message', (data) => {
+    console.log(data)
     // limit message size
     if (data.msg.message.length > 14000) {
       console.log("An error occured: message too long")
@@ -470,7 +469,6 @@ io.on('connection', (socket) => {
     });
 
     await Rooms.getRooms(username).then((rooms) => {
-      console.log("maybe here3", rooms)
       //publicChannels.filter(r => !r.direct && !r.private)
 
       socket.emit('login', {
